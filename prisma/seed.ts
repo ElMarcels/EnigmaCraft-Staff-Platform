@@ -1,17 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
-import path from "node:path";
 
-function resolveSqlitePath(url: string): string {
-  const cleaned = url.replace(/^file:/, "");
-  if (cleaned === ":memory:") return cleaned;
-  if (path.isAbsolute(cleaned)) return cleaned;
-  return path.resolve(process.cwd(), cleaned);
-}
-
-const adapter = new PrismaBetterSqlite3({
-  url: resolveSqlitePath(process.env.DATABASE_URL || "file:./dev.db"),
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+  max: 1,
 });
 const prisma = new PrismaClient({ adapter });
 

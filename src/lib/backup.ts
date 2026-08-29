@@ -1,21 +1,9 @@
 import "server-only";
-import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
-import path from "node:path";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
-import { STORAGE_DIR } from "@/lib/storage";
+import { putBlob, BLOB_PREFIX } from "@/lib/blob";
 
-const BACKUPS_DIR = path.join(process.cwd(), "backups");
 const AUTO_INTERVAL_MS = 1000 * 60 * 60 * 24;
-
-function sumSize(p: string): number {
-  const st = statSync(p, { throwIfNoEntry: false });
-  if (!st) return 0;
-  if (st.isFile()) return st.size;
-  let s = 0;
-  for (const e of readdirSync(p)) s += sumSize(path.join(p, e));
-  return s;
-}
 
 export async function createBackup(opts: {
   creatorId?: string | null;
@@ -23,33 +11,43 @@ export async function createBackup(opts: {
 }) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const name = `${opts.type === "automatic" ? "auto" : "backup"}-${timestamp}`;
-  const dir = path.join(BACKUPS_DIR, name);
-  mkdirSync(dir, { recursive: true });
 
-  let totalSize = 0;
+  const [users, categories, channels, messages, announcements, notifications, fileNodes] =
+    await Promise.all([
+      prisma.user.findMany(),
+      prisma.channelCategory.findMany(),
+      prisma.channel.findMany(),
+      prisma.message.findMany(),
+      prisma.announcement.findMany(),
+      prisma.notification.findMany(),
+      prisma.fileNode.findMany(),
+    ]);
 
-  if (existsSync(STORAGE_DIR)) {
-    for (const entry of readdirSync(STORAGE_DIR)) {
-      const src = path.join(STORAGE_DIR, entry);
-      if (!existsSync(src)) continue;
-      const dest = path.join(dir, "files-" + entry);
-      cpSync(src, dest, { recursive: true });
-      totalSize += sumSize(dest);
-    }
-  }
+  const snapshot = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: {
+      users,
+      categories,
+      channels,
+      messages,
+      announcements,
+      notifications,
+      fileNodes,
+    },
+  };
 
-  const dbPath = path.join(process.cwd(), "dev.db");
-  if (existsSync(dbPath)) {
-    const dest = path.join(dir, "db-" + path.basename(dbPath));
-    cpSync(dbPath, dest);
-    totalSize += sumSize(dest);
-  }
+  const json = JSON.stringify(snapshot, null, 2);
+  const blob = await putBlob(`${BLOB_PREFIX}/backups/${name}.json`, json, {
+    contentType: "application/json",
+    access: "private",
+  });
 
   const backup = await prisma.backup.create({
     data: {
       name,
-      path: dir,
-      size: totalSize,
+      path: blob.url,
+      size: Buffer.byteLength(json, "utf-8"),
       status: "completed",
       type: opts.type,
       createdById: opts.creatorId ?? null,

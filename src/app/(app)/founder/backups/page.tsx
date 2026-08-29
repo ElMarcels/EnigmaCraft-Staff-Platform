@@ -91,9 +91,8 @@ export default async function BackupsPage() {
       </div>
 
       <p className="mt-4 text-xs text-white/30">
-        Las copias se guardan localmente en la carpeta{" "}
-        <code className="text-white/50">backups/</code>. En producción se crea
-        una copia automática cada 24 horas.
+        Las copias se guardan como instantáneas en el almacenamiento de Vercel
+        Blob. En producción se crea una copia automática cada 24 horas vía cron.
       </p>
     </div>
   );

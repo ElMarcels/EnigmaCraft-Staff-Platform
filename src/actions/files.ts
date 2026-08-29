@@ -4,6 +4,24 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUserOrThrow } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { deleteBlob } from "@/lib/blob";
+
+async function collectBlobKeys(nodeId: string): Promise<string[]> {
+  const keys: string[] = [];
+  const stack = [nodeId];
+  while (stack.length) {
+    const current = stack.pop()!;
+    const children = await prisma.fileNode.findMany({
+      where: { parentId: current },
+      select: { id: true, isFolder: true, storageKey: true },
+    });
+    for (const child of children) {
+      if (child.storageKey) keys.push(child.storageKey);
+      if (child.isFolder) stack.push(child.id);
+    }
+  }
+  return keys;
+}
 
 function sanitize(name: string): string {
   const n = name.replace(/[\\/]/g, "").trim();
@@ -48,6 +66,9 @@ export async function deleteFileOrFolder(nodeId: string) {
   ) {
     return;
   }
+  const blobKeys = await collectBlobKeys(node.id);
+  if (node.storageKey) blobKeys.push(node.storageKey);
+  await Promise.all(blobKeys.map((k) => deleteBlob(k).catch(() => {})));
   await prisma.fileNode.delete({ where: { id: nodeId } });
   await audit({
     userId: user.id,

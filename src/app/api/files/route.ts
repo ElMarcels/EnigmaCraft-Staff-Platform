@@ -3,21 +3,31 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { storagePath, ensureDir } from "@/lib/storage";
-import { audit } from "@/lib/audit";
+import { issueSignedToken, presignUrl } from "@vercel/blob";
+import { BLOB_PREFIX } from "@/lib/blob";
 
 export const runtime = "nodejs";
+
+const MAX_BYTES = 2 * 1024 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const formData = await request.formData();
-  const file = formData.get("file");
-  const parentId = String(formData.get("parentId") || "") || null;
+  const body = (await request.json().catch(() => null)) as {
+    name?: string;
+    size?: number;
+    type?: string;
+    parentId?: string;
+  } | null;
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "No se recibió archivo" }, { status: 400 });
+  const name = String(body?.name || "").replace(/[\\/]/g, "").trim();
+  const size = Number(body?.size) || 0;
+  const parentId = String(body?.parentId || "") || null;
+
+  if (!name) return NextResponse.json({ error: "Nombre no válido" }, { status: 400 });
+  if (!(size > 0) || size > MAX_BYTES) {
+    return NextResponse.json({ error: "Tamaño de archivo no válido" }, { status: 400 });
   }
 
   if (parentId) {
@@ -28,33 +38,26 @@ export async function POST(request: NextRequest) {
   }
 
   const id = randomUUID();
-  const storageKey = `${id}${path.extname(file.name)}`;
-  const dir = storagePath("files");
-  ensureDir(dir);
+  const pathname = `${BLOB_PREFIX}/${id}${path.extname(name).toLowerCase()}`;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await import("node:fs/promises")
-    .then((fs) => fs.writeFile(path.join(dir, storageKey), buffer));
-
-  const node = await prisma.fileNode.create({
-    data: {
-      name: file.name,
-      isFolder: false,
-      size: file.size,
-      mimeType: file.type || null,
-      storageKey,
-      parentId,
-      ownerId: user.id,
-    },
+  const { clientSigningToken, delegationToken } = await issueSignedToken({
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+    pathname,
+    operations: ["put"],
+    validUntil: Date.now() + 1000 * 60 * 60,
   });
 
-  await audit({
-    userId: user.id,
-    action: "FILE_UPLOAD",
-    targetType: "FileNode",
-    targetId: node.id,
-    details: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
-  });
+  const { presignedUrl } = await presignUrl(
+    { clientSigningToken, delegationToken },
+    {
+      operation: "put",
+      pathname,
+      access: "public",
+      allowOverwrite: false,
+      addRandomSuffix: false,
+      maximumSizeInBytes: MAX_BYTES,
+    }
+  );
 
-  return NextResponse.json({ ok: true, node });
+  return NextResponse.json({ presignedUrl, pathname });
 }

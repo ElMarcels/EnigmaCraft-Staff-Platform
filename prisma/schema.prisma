@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum Role {
@@ -113,6 +113,7 @@ model FileNode {
   size        Int      @default(0)
   mimeType    String?
   storageKey  String?
+  url         String?
   parentId    String?
   parent      FileNode?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children    FileNode[] @relation("FolderChildren")

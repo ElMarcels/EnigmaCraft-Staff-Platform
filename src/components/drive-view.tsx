@@ -60,19 +60,52 @@ export function DriveView({
     setUploadMsg(null);
     try {
       const all = Array.from(files);
+      let uploaded = 0;
       for (const file of all) {
-        const fd = new FormData();
-        fd.append("file", file);
-        if (folderId) fd.append("parentId", folderId);
-        const res = await fetch("/api/files", { method: "POST", body: fd });
-        if (!res.ok) {
-          const j = await res.json().catch(() => null);
-          setUploadMsg(j?.error || "Error al subir archivo.");
+        const signRes = await fetch("/api/files", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: file.name,
+            size: file.size,
+            parentId: folderId,
+          }),
+        });
+        if (!signRes.ok) {
+          const j = await signRes.json().catch(() => null);
+          setUploadMsg(j?.error || "Error al preparar la subida.");
           return;
         }
+        const { presignedUrl, pathname } = await signRes.json();
+
+        const res = await fetch(presignedUrl, { method: "PUT", body: file });
+        if (!res.ok) {
+          setUploadMsg(`Error al subir ${file.name}.`);
+          return;
+        }
+
+        const confirmRes = await fetch("/api/files/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pathname,
+            name: file.name,
+            size: file.size,
+            type: file.type || null,
+            parentId: folderId,
+          }),
+        });
+        if (!confirmRes.ok) {
+          const j = await confirmRes.json().catch(() => null);
+          setUploadMsg(j?.error || "Error al guardar el archivo.");
+          return;
+        }
+        uploaded++;
       }
       router.refresh();
-      setUploadMsg(`Se subieron ${all.length} archivo(s).`);
+      setUploadMsg(
+        `Se ${uploaded === 1 ? "subió" : "subieron"} ${uploaded} archivo(s).`
+      );
     } catch {
       setUploadMsg("Error de red al subir archivos.");
     } finally {

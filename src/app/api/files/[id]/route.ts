@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { storagePath } from "@/lib/storage";
+import { streamBlob } from "@/lib/blob";
 
 export const runtime = "nodejs";
 
@@ -16,23 +14,21 @@ export async function GET(
 
   const { id } = await params;
   const node = await prisma.fileNode.findUnique({ where: { id } });
-  if (!node || node.isFolder || !node.storageKey) {
+  if (!node || node.isFolder || !node.url || !node.storageKey) {
     return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
   }
 
-  const filePath = path.join(storagePath("files"), node.storageKey);
-  let data: Buffer;
+  let stream: ReadableStream;
   try {
-    data = await readFile(filePath);
+    stream = await streamBlob(node.url);
   } catch {
     return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
   }
 
   const encoded = encodeURIComponent(node.name);
-  return new NextResponse(new Uint8Array(data), {
+  return new NextResponse(stream, {
     headers: {
       "Content-Type": node.mimeType || "application/octet-stream",
-      "Content-Length": String(data.length),
       "Content-Disposition": `attachment; filename*=UTF-8''${encoded}`,
     },
   });

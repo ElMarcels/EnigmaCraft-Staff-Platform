@@ -1,0 +1,9 @@
+{
+  "buildCommand": "prisma generate && prisma migrate deploy && node --experimental-strip-types prisma/seed.ts && next build",
+  "crons": [
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
