@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserOrThrow } from "@/lib/auth";
 import { DmThread } from "@/components/dm-thread";
+import { statusOf } from "@/lib/role-meta";
 import Link from "next/link";
 import { IconArrowLeft } from "@/components/icons";
 
@@ -30,6 +31,28 @@ export default async function DmThreadPage({
   ]);
   if (!partner) notFound();
 
+  const st = statusOf(partner);
+  let notice: { text: string; tone: "away" | "vacation" | "offline" } | null =
+    null;
+  if (st) {
+    if (st.key === "AWAY") {
+      notice = {
+        text: `${partner.displayName} está ausente; puede tardar en responder.`,
+        tone: "away",
+      };
+    } else if (st.key === "VACATION") {
+      notice = {
+        text: `${partner.displayName} está de vacaciones.`,
+        tone: "vacation",
+      };
+    }
+  } else {
+    notice = {
+      text: `${partner.displayName} no está conectado ahora mismo.`,
+      tone: "offline",
+    };
+  }
+
   await prisma.directMessage.updateMany({
     where: { senderId: userId, recipientId: user.id, read: false },
     data: { read: true },
@@ -50,6 +73,7 @@ export default async function DmThreadPage({
       <DmThread
         partnerId={partner.id}
         partnerName={partner.displayName}
+        notice={notice}
         messages={messages.map((m) => ({
           id: m.id,
           content: m.content,

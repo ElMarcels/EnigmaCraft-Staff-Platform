@@ -35,10 +35,12 @@ function Mentioned({ text }: { text: string }) {
 export function DmThread({
   partnerId,
   partnerName,
+  notice,
   messages,
 }: {
   partnerId: string;
   partnerName: string;
+  notice?: { text: string; tone: "away" | "vacation" | "offline" } | null;
   messages: DmMessageDTO[];
 }) {
   const router = useRouter();
@@ -75,6 +77,19 @@ export function DmThread({
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 py-4">
+        {notice ? (
+          <div
+            className={`mb-2 rounded-lg border px-3 py-2 text-xs ${
+              notice.tone === "away"
+                ? "border-amber-400/20 bg-amber-500/10 text-amber-300"
+                : notice.tone === "vacation"
+                  ? "border-sky-400/20 bg-sky-500/10 text-sky-300"
+                  : "border-white/10 bg-white/[0.03] text-white/40"
+            }`}
+          >
+            {notice.text}
+          </div>
+        ) : null}
         <div className="flex flex-col gap-0.5">
           {messages.map((m) => (
             <div

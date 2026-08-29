@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/contact-reminder",
       "schedule": "0 8 1 * *"
+    },
+    {
+      "path": "/api/cron/inactivity-alert",
+      "schedule": "0 7 * * *"
     }
   ]
 }

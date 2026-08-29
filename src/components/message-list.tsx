@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { deleteMessage, toggleReaction } from "@/actions/messaging";
 import { Avatar, RoleBadge } from "@/components/role-badge";
 import { IconTrash, IconPlus } from "@/components/icons";
+import { statusOf } from "@/lib/role-meta";
 import type { Role } from "@prisma/client";
 
 export type ReactionDTO = {
@@ -25,6 +27,8 @@ export type MessageDTO = {
     avatarColor: string;
     role: Role;
     discord?: string | null;
+    lastSeenAt?: string | null;
+    status?: string | null;
   };
   canDelete: boolean;
   reactions: ReactionDTO[];
@@ -89,7 +93,12 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
   return (
     <div className="flex-1 overflow-y-auto px-5 py-4">
       <div className="flex flex-col gap-0.5">
-        {rows.map(({ msg, grouped }) => (
+        {rows.map(({ msg, grouped }) => {
+          const authorStatus = statusOf({
+            status: msg.author.status,
+            lastSeenAt: msg.author.lastSeenAt,
+          });
+          return (
           <div
             key={msg.id}
             className={`group flex gap-3 rounded-lg px-2 py-1 hover:bg-white/[0.04] ${
@@ -102,13 +111,15 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
             <div className="min-w-0 flex-1">
               {grouped ? null : (
                 <div className="flex items-center gap-2">
-                  <div className="relative group/author">
-                    <span
+                  <div className="relative flex items-center gap-1 group/author">
+                    <Link
+                      href={`/directory/${msg.author.id}`}
                       className="cursor-help font-semibold text-white transition-colors hover:underline"
                       style={{ color: msg.author.avatarColor }}
+                      title="Abrir ficha"
                     >
                       {msg.author.displayName}
-                    </span>
+                    </Link>
                     {msg.author.discord ? (
                       <div className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden whitespace-nowrap rounded-lg border border-white/10 bg-[#12151f] px-2.5 py-1.5 text-xs text-white/80 shadow-xl group-hover/author:block">
                         <span className="font-semibold text-indigo-300">
@@ -118,6 +129,12 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
                       </div>
                     ) : null}
                   </div>
+                  {authorStatus ? (
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${authorStatus.dot}`}
+                      title={authorStatus.label}
+                    />
+                  ) : null}
                   <RoleBadge role={msg.author.role} />
                   <span className="text-[11px] text-white/30">
                     {new Date(msg.createdAt).toLocaleTimeString([], {
@@ -197,7 +214,8 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <div ref={bottomRef} />
     </div>

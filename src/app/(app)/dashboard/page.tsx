@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { RoleBadge } from "@/components/role-badge";
+import { Avatar, RoleBadge } from "@/components/role-badge";
 import {
   IconUsers,
   IconChat,
@@ -9,6 +9,7 @@ import {
   IconMegaphone,
   IconBackup,
 } from "@/components/icons";
+import { statusOf } from "@/lib/role-meta";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const [staffCount, channelCount, messageCount, fileCount, fileBytes, backupCount, announcements] =
+  const [staffCount, channelCount, messageCount, fileCount, fileBytes, backupCount, announcements, allStaff] =
     await Promise.all([
       prisma.user.count({ where: { active: true } }),
       prisma.channel.count(),
@@ -36,7 +37,23 @@ export default async function DashboardPage() {
         take: 4,
         include: { author: true },
       }),
+      prisma.user.findMany({
+        where: { active: true },
+        orderBy: [{ role: "asc" }, { displayName: "asc" }],
+        select: {
+          id: true,
+          displayName: true,
+          avatarColor: true,
+          role: true,
+          status: true,
+          lastSeenAt: true,
+        },
+      }),
     ]);
+
+  const onlineStaff = allStaff.filter(
+    (u) => statusOf({ status: u.status, lastSeenAt: u.lastSeenAt })?.key === "ONLINE"
+  );
 
   const stats = [
     { label: "Staff activo", value: staffCount, icon: IconUsers, href: "/founder/users" },
@@ -72,6 +89,47 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      <section className="mt-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            En línea ahora ({onlineStaff.length})
+          </h2>
+          <Link href="/directory" className="text-sm text-indigo-300 hover:underline">
+            Ver directorio
+          </Link>
+        </div>
+        {onlineStaff.length === 0 ? (
+          <p className="card text-sm text-white/40">
+            Nadie conectado ahora mismo.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {onlineStaff.map((m) => (
+              <Link
+                key={m.id}
+                href={`/directory/${m.id}`}
+                className="card flex items-center gap-3 transition-colors hover:bg-white/[0.06]"
+              >
+                <Avatar name={m.displayName} color={m.avatarColor} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 truncate font-semibold text-white">
+                    {m.displayName}
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="text-xs text-white/40">
+                    <RoleBadge role={m.role} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">

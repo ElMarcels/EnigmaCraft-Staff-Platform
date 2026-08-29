@@ -7,6 +7,7 @@ import {
 } from "@/actions/messaging";
 import { Avatar } from "@/components/role-badge";
 import { IconMegaphone, IconTrash, IconClock } from "@/components/icons";
+import { formatInTimezone } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +114,14 @@ export default async function AnnouncementsPage() {
                     ) : null}
                   </div>
                   <div className="text-xs text-white/40">
-                    Se publica el {a.publishAt?.toLocaleString("es-ES")}
+                    Se publica el{" "}
+                    {formatInTimezone(a.publishAt, user?.timezone, {
+                      dateStyle: "long",
+                      timeStyle: "short",
+                    })}
+                    {user?.timezone ? (
+                      <span className="text-white/25"> ({user.timezone})</span>
+                    ) : null}
                   </div>
                 </div>
                 <form action={deleteAnnouncement.bind(null, a.id)}>
