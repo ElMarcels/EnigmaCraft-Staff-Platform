@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUserWithStatus } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AppShell } from "@/components/app-shell";
 
@@ -8,7 +8,8 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
+  const { user, suspended } = await getCurrentUserWithStatus();
+  if (suspended) redirect("/suspended");
   if (!user) redirect("/login");
 
   const unreadCount = await prisma.notification.count({

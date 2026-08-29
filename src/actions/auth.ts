@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
-import { createSession, destroySession, getCurrentUserOrThrow } from "@/lib/auth";
+import { createSession, destroySession, getCurrentUserWithStatus } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 
 export type LoginState = { error?: string };
@@ -20,11 +20,37 @@ export async function loginAction(
   }
 
   const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !user.active || !verifyPassword(password, user.passwordHash)) {
+  if (!user || !verifyPassword(password, user.passwordHash)) {
     return { error: "Credenciales incorrectas." };
   }
 
   await createSession(user.id);
+
+  if (!user.active) {
+    const suspended =
+      user.suspendedUntil && user.suspendedUntil.getTime() <= Date.now()
+        ? null // suspensión temporal ya expirada: se reactiva al entrar
+        : user.suspendedUntil ?? true;
+    if (suspended === null) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { active: true, suspendedUntil: null, suspensionReason: null },
+      });
+      await audit({
+        userId: user.id,
+        action: "LOGIN",
+        details: `Inicio de sesión (${user.username})`,
+      });
+      redirect("/dashboard");
+    }
+    await audit({
+      userId: user.id,
+      action: "SUSPENDED_LOGIN",
+      details: `Intento de acceso con cuenta suspendida (${user.username})`,
+    });
+    redirect("/suspended");
+  }
+
   await audit({
     userId: user.id,
     action: "LOGIN",
@@ -34,8 +60,10 @@ export async function loginAction(
 }
 
 export async function logoutAction() {
-  const user = await getCurrentUserOrThrow();
-  await audit({ userId: user.id, action: "LOGOUT" });
+  const status = await getCurrentUserWithStatus();
+  if (status.user) {
+    await audit({ userId: status.user.id, action: "LOGOUT" });
+  }
   await destroySession();
   redirect("/login");
 }

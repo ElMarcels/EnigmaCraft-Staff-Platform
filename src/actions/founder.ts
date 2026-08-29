@@ -80,16 +80,67 @@ export async function updateUserRole(formData: FormData) {
   revalidatePath("/founder/users");
 }
 
-export async function toggleUserActive(userId: string) {
+const SUSPENSION_DURATIONS: Record<string, number | null> = {
+  "1d": 24 * 60 * 60 * 1000,
+  "3d": 3 * 24 * 60 * 60 * 1000,
+  "1w": 7 * 24 * 60 * 60 * 1000,
+  "2w": 14 * 24 * 60 * 60 * 1000,
+  "1m": 30 * 24 * 60 * 60 * 1000,
+  "3m": 90 * 24 * 60 * 60 * 1000,
+  forever: null,
+};
+
+export async function suspendUserAction(
+  formData: FormData
+): Promise<UserFormState> {
+  const founder = await requireRole("FOUNDER");
+  const targetId = String(formData.get("userId") || "");
+  const durationKey = String(formData.get("duration") || "");
+  const reason = String(formData.get("reason") || "").trim();
+
+  const target = await prisma.user.findUnique({ where: { id: targetId } });
+  if (!target) return { error: "Usuario no encontrado" };
+  if (target.role === "FOUNDER") {
+    return { error: "No puedes suspender a otro fundador" };
+  }
+  const ms = SUSPENSION_DURATIONS[durationKey];
+  if (ms === undefined) return { error: "Duración no válida" };
+  if (reason.length < 3) {
+    return { error: "Escribe una razón (mínimo 3 caracteres)" };
+  }
+
+  const suspendedUntil = ms === null ? null : new Date(Date.now() + ms);
+  await prisma.user.update({
+    where: { id: targetId },
+    data: { active: false, suspendedUntil, suspensionReason: reason },
+  });
+
+  await audit({
+    userId: founder.id,
+    action: "USER_SUSPEND",
+    targetType: "User",
+    targetId,
+    details: `${target.username}: ${
+      suspendedUntil ? `hasta ${suspendedUntil.toISOString()}` : "permanente"
+    } — ${reason}`,
+  });
+  revalidatePath("/founder/users");
+  return {};
+}
+
+export async function unsuspendUser(userId: string) {
   const founder = await requireRole("FOUNDER");
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target || target.role === "FOUNDER") return;
+  if (target.active) return;
 
-  const next = !target.active;
-  await prisma.user.update({ where: { id: userId }, data: { active: next } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { active: true, suspendedUntil: null, suspensionReason: null },
+  });
   await audit({
     userId: founder.id,
-    action: next ? "USER_ENABLE" : "USER_DISABLE",
+    action: "USER_UNSUSPEND",
     targetType: "User",
     targetId: userId,
     details: target.username,

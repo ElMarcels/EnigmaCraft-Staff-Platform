@@ -34,6 +34,8 @@ model User {
   role         Role     @default(STAFF)
   avatarColor  String   @default("#6366f1")
   active       Boolean  @default(true)
+  suspendedUntil   DateTime?
+  suspensionReason String?
   createdById  String?
   createdBy    User?    @relation("CreatedBy", fields: [createdById], references: [id])
   createdAt    DateTime @default(now())

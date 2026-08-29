@@ -2,10 +2,21 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { Role } from "@prisma/client";
+import { Role, User } from "@prisma/client";
 
 const SESSION_COOKIE = "ec_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+
+export type SuspensionInfo = {
+  reason: string | null;
+  until: Date | null;
+  permanent: boolean;
+};
+
+export type SessionStatus = {
+  user: User | null;
+  suspended: SuspensionInfo | null;
+};
 
 type SessionPayload = {
   sub: string;
@@ -58,14 +69,48 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
-export async function getCurrentUser() {
+export function suspensionInfoFor(user: User): SuspensionInfo | null {
+  if (user.active) return null;
+  if (user.suspendedUntil && user.suspendedUntil.getTime() <= Date.now()) {
+    return null;
+  }
+  return {
+    reason: user.suspensionReason,
+    until: user.suspendedUntil,
+    permanent: !user.suspendedUntil,
+  };
+}
+
+async function reactivateIfExpired(user: User): Promise<User> {
+  if (
+    !user.active &&
+    user.suspendedUntil &&
+    user.suspendedUntil.getTime() <= Date.now()
+  ) {
+    return prisma.user.update({
+      where: { id: user.id },
+      data: { active: true, suspendedUntil: null, suspensionReason: null },
+    });
+  }
+  return user;
+}
+
+export async function getCurrentUserWithStatus(): Promise<SessionStatus> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+  if (!token) return { user: null, suspended: null };
   const payload = parseSessionToken(token);
-  if (!payload) return null;
+  if (!payload) return { user: null, suspended: null };
   const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-  if (!user || !user.active) return null;
+  if (!user) return { user: null, suspended: null };
+
+  const fresh = await reactivateIfExpired(user);
+  const suspended = suspensionInfoFor(fresh);
+  return { user: suspended ? null : fresh, suspended };
+}
+
+export async function getCurrentUser() {
+  const { user } = await getCurrentUserWithStatus();
   return user;
 }
 

@@ -37,6 +37,8 @@ export default async function UsersPage() {
                 displayName: u.displayName,
                 role: u.role,
                 active: u.active,
+                suspendedUntil: u.suspendedUntil?.toISOString() || null,
+                suspensionReason: u.suspensionReason,
                 avatarColor: u.avatarColor,
                 createdAt: u.createdAt.toISOString(),
                 createdByName: u.createdBy?.displayName || null,

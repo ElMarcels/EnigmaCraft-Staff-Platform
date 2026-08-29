@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import type { Role } from "@prisma/client";
 import {
   updateUserRole,
-  toggleUserActive,
+  suspendUserAction,
+  unsuspendUser,
   resetUserPassword,
   deleteUser,
 } from "@/actions/founder";
@@ -19,10 +20,22 @@ export type UserRowDTO = {
   displayName: string;
   role: Role;
   active: boolean;
+  suspendedUntil: string | null;
+  suspensionReason: string | null;
   avatarColor: string;
   createdAt: string;
   createdByName: string | null;
 };
+
+const DURATION_OPTIONS: { value: string; label: string }[] = [
+  { value: "1d", label: "1 día" },
+  { value: "3d", label: "3 días" },
+  { value: "1w", label: "1 semana" },
+  { value: "2w", label: "2 semanas" },
+  { value: "1m", label: "1 mes" },
+  { value: "3m", label: "3 meses" },
+  { value: "forever", label: "Permanente" },
+];
 
 export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean }) {
   const router = useRouter();
@@ -30,7 +43,13 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
   const [role, setRole] = useState<Role>(user.role);
   const [resetting, setResetting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [suspendError, setSuspendError] = useState<string | null>(null);
+  const [suspendDuration, setSuspendDuration] = useState("1w");
+  const [suspendReason, setSuspendReason] = useState("");
   const isFounder = user.role === "FOUNDER";
+  const suspended = !user.active;
+  const permanent = suspended && !user.suspendedUntil;
 
   function changeRole(next: Role) {
     setRole(next);
@@ -41,8 +60,26 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
     startTransition(() => updateUserRole(fd).then(() => router.refresh()));
   }
 
-  function toggleActive() {
-    startTransition(() => toggleUserActive(user.id).then(() => router.refresh()));
+  function submitSuspend() {
+    const fd = new FormData();
+    fd.set("userId", user.id);
+    fd.set("duration", suspendDuration);
+    fd.set("reason", suspendReason);
+    startTransition(async () => {
+      const res = await suspendUserAction(fd);
+      if (res?.error) {
+        setSuspendError(res.error);
+      } else {
+        setSuspendOpen(false);
+        setSuspendReason("");
+        setSuspendError(null);
+        router.refresh();
+      }
+    });
+  }
+
+  function reactivate() {
+    startTransition(() => unsuspendUser(user.id).then(() => router.refresh()));
   }
 
   return (
@@ -53,9 +90,9 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
           <span className="font-semibold text-white">{user.displayName}</span>
           <RoleBadge role={user.role} />
           {isSelf ? <span className="text-[11px] text-white/30">(tú)</span> : null}
-          {!user.active ? (
+          {suspended ? (
             <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-red-300">
-              Desactivado
+              Suspendido
             </span>
           ) : null}
         </div>
@@ -64,6 +101,16 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
           {user.createdByName ? ` · creado por ${user.createdByName}` : ""} ·{" "}
           {new Date(user.createdAt).toLocaleDateString()}
         </div>
+        {suspended ? (
+          <div className="mt-1 rounded bg-red-500/10 px-2 py-1 text-xs text-red-200/80">
+            {permanent
+              ? "Suspensión permanente"
+              : `Suspendido hasta ${new Date(
+                  user.suspendedUntil as string
+                ).toLocaleString()}`}
+            {user.suspensionReason ? ` · "${user.suspensionReason}"` : ""}
+          </div>
+        ) : null}
       </div>
 
       {isFounder ? (
@@ -90,14 +137,28 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
             </span>
           ) : null}
 
-          <button
-            onClick={toggleActive}
-            disabled={pending}
-            className="btn-secondary !py-1.5"
-            title={user.active ? "Desactivar cuenta (bloquea el acceso)" : "Activar cuenta"}
-          >
-            {user.active ? "Desactivar" : "Activar"}
-          </button>
+          {suspended ? (
+            <button
+              onClick={reactivate}
+              disabled={pending}
+              className="btn-secondary !py-1.5 border-green-500/30 text-green-300 hover:bg-green-500/10"
+              title="Levantar la suspensión"
+            >
+              Reactivar
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setSuspendOpen((v) => !v);
+                setSuspendError(null);
+              }}
+              disabled={pending}
+              className="btn-secondary !py-1.5 border-red-500/30 text-red-300 hover:bg-red-500/10"
+              title="Suspender cuenta"
+            >
+              Suspender
+            </button>
+          )}
 
           <div className="flex items-center gap-1">
             <button
@@ -137,6 +198,54 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
           </div>
         </div>
       )}
+
+      {suspendOpen && !isFounder ? (
+        <div className="flex basis-full flex-wrap items-end gap-2 pl-11">
+          <div className="flex flex-col">
+            <label className="label">Duración</label>
+            <select
+              value={suspendDuration}
+              onChange={(e) => setSuspendDuration(e.target.value)}
+              className="input !w-40 !py-1.5 text-sm"
+            >
+              {DURATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-0 flex-1">
+            <label className="label">Razón de la suspensión</label>
+            <input
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              className="input"
+              required
+              minLength={3}
+              placeholder="Motivo de la suspensión"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={submitSuspend}
+            disabled={pending || suspendReason.trim().length < 3}
+            className="btn-danger !py-1.5"
+          >
+            Confirmar
+          </button>
+          <button
+            type="button"
+            onClick={() => setSuspendOpen(false)}
+            className="btn-secondary !py-1.5"
+          >
+            Cancelar
+          </button>
+          {suspendError ? (
+            <span className="basis-full text-xs text-red-300">{suspendError}</span>
+          ) : null}
+        </div>
+      ) : null}
 
       {resetting && !isFounder ? (
         <form
