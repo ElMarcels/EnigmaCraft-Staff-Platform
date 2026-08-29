@@ -38,3 +38,50 @@ export const ALL_ROLES: Role[] = [
   "BUILDER",
   "STAFF",
 ];
+
+export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+export const STATUS_META: Record<
+  string,
+  { label: string; dot: string; text: string }
+> = {
+  AWAY: {
+    label: "Ausente",
+    dot: "bg-amber-400",
+    text: "text-amber-300",
+  },
+  VACATION: {
+    label: "De vacaciones",
+    dot: "bg-sky-400",
+    text: "text-sky-300",
+  },
+};
+
+export type ActivityStatus = "AWAY" | "VACATION";
+
+export function isOnline(
+  lastSeenAt?: Date | string | null
+): boolean {
+  if (!lastSeenAt) return false;
+  return Date.now() - new Date(lastSeenAt).getTime() < ONLINE_WINDOW_MS;
+}
+
+export function statusOf(
+  user: { status?: string | null; lastSeenAt?: Date | string | null }
+):
+  | { key: "AWAY"; label: string; dot: string; text: string }
+  | { key: "VACATION"; label: string; dot: string; text: string }
+  | { key: "ONLINE"; label: string; dot: string; text: string }
+  | null {
+  if (user.status === "AWAY") return { key: "AWAY", ...STATUS_META.AWAY };
+  if (user.status === "VACATION")
+    return { key: "VACATION", ...STATUS_META.VACATION };
+  if (isOnline(user.lastSeenAt))
+    return {
+      key: "ONLINE",
+      label: "En línea",
+      dot: "bg-emerald-400",
+      text: "text-emerald-300",
+    };
+  return null;
+}

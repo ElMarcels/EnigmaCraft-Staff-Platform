@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ContactForm } from "@/components/contact-form";
+import { statusOf } from "@/lib/role-meta";
 
 type Props = {
   user: {
@@ -12,12 +13,25 @@ type Props = {
     contactDiscord: string | null;
     contactEmail: string | null;
     contactOther: string | null;
+    timezone: string | null;
+    status: string | null;
+    lastSeenAt: Date | null;
     createdAt: Date;
   };
 };
 
 export function DirectorySelfCard({ user }: Props) {
   const [editing, setEditing] = useState(false);
+  const st = statusOf(user);
+
+  const summary = [
+    user.contactDiscord ? `Discord: ${user.contactDiscord}` : null,
+    user.contactEmail || null,
+    st ? st.label : null,
+    user.timezone || null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="card -mt-2 p-5">
@@ -27,10 +41,8 @@ export function DirectorySelfCard({ user }: Props) {
             Tu ficha
           </div>
           <p className="mt-0.5 text-sm text-white/60">
-            {user.contactDiscord
-              ? `Discord: ${user.contactDiscord}` +
-                (user.contactEmail ? ` · ${user.contactEmail}` : "")
-              : "Todavía no has completado tu ficha de contacto."}
+            {summary ||
+              "Todavía no has completado tu ficha de contacto."}
           </p>
         </div>
         <button
@@ -51,6 +63,8 @@ export function DirectorySelfCard({ user }: Props) {
               discord: user.contactDiscord,
               email: user.contactEmail,
               other: user.contactOther,
+              timezone: user.timezone,
+              status: user.status,
             }}
           />
         </div>

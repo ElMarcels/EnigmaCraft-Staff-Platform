@@ -82,6 +82,7 @@ export default async function ChannelPage({
             displayName: m.author.displayName,
             avatarColor: m.author.avatarColor,
             role: m.author.role,
+            discord: m.author.contactDiscord,
           },
           canDelete:
             canDelete || (!!user && m.authorId === user.id),

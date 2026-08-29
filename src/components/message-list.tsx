@@ -24,6 +24,7 @@ export type MessageDTO = {
     displayName: string;
     avatarColor: string;
     role: Role;
+    discord?: string | null;
   };
   canDelete: boolean;
   reactions: ReactionDTO[];
@@ -101,12 +102,22 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
             <div className="min-w-0 flex-1">
               {grouped ? null : (
                 <div className="flex items-center gap-2">
-                  <span
-                    className="font-semibold text-white transition-colors hover:underline"
-                    style={{ color: msg.author.avatarColor }}
-                  >
-                    {msg.author.displayName}
-                  </span>
+                  <div className="relative group/author">
+                    <span
+                      className="cursor-help font-semibold text-white transition-colors hover:underline"
+                      style={{ color: msg.author.avatarColor }}
+                    >
+                      {msg.author.displayName}
+                    </span>
+                    {msg.author.discord ? (
+                      <div className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden whitespace-nowrap rounded-lg border border-white/10 bg-[#12151f] px-2.5 py-1.5 text-xs text-white/80 shadow-xl group-hover/author:block">
+                        <span className="font-semibold text-indigo-300">
+                          @{msg.author.discord}
+                        </span>
+                        {" · Discord"}
+                      </div>
+                    ) : null}
+                  </div>
                   <RoleBadge role={msg.author.role} />
                   <span className="text-[11px] text-white/30">
                     {new Date(msg.createdAt).toLocaleTimeString([], {

@@ -26,6 +26,11 @@ export async function loginAction(
 
   await createSession(user.id);
 
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastSeenAt: new Date() },
+  });
+
   if (!user.active) {
     const suspended =
       user.suspendedUntil && user.suspendedUntil.getTime() <= Date.now()

@@ -5,12 +5,14 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserOrThrow } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import type { ActivityStatus } from "@/lib/role-meta";
 
 export type ContactState = { error?: string; ok?: boolean };
 
 export type ContactRedirect = "dashboard" | "directory";
 
 const DISCORD_RE = /^[^\s]+$/;
+const VALID_STATUS: ActivityStatus[] = ["AWAY", "VACATION"];
 
 export async function saveContactInfoAction(
   redirectTo: ContactRedirect,
@@ -21,6 +23,11 @@ export async function saveContactInfoAction(
   const discord = String(formData.get("discord") || "").trim();
   const email = String(formData.get("email") || "").trim() || null;
   const other = String(formData.get("other") || "").trim() || null;
+  const timezone = String(formData.get("timezone") || "").trim() || null;
+  const statusRaw = String(formData.get("status") || "").trim();
+  const status = VALID_STATUS.includes(statusRaw as ActivityStatus)
+    ? (statusRaw as ActivityStatus)
+    : null;
 
   if (!discord) return { error: "El Discord es obligatorio." };
   if (!DISCORD_RE.test(discord))
@@ -28,13 +35,20 @@ export async function saveContactInfoAction(
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { contactDiscord: discord, contactEmail: email, contactOther: other },
+    data: {
+      contactDiscord: discord,
+      contactEmail: email,
+      contactOther: other,
+      timezone,
+      status,
+      contactUpdatedAt: new Date(),
+    },
   });
 
   await audit({
     userId: user.id,
     action: "CONTACT_UPDATE",
-    details: `Ficha de contacto actualizada (${distinguidor(discord, email)})`,
+    details: `Ficha de contacto actualizada (${discord}${email ? ` · ${email}` : ""})`,
   });
 
   if (redirectTo === "dashboard") {
@@ -42,8 +56,4 @@ export async function saveContactInfoAction(
   }
   revalidatePath("/directory");
   return { ok: true };
-}
-
-function distinguidor(discord: string, email: string | null) {
-  return email ? `${discord} · ${email}` : discord;
 }

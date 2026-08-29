@@ -126,6 +126,16 @@ export async function getCurrentUserOrThrow() {
   return user;
 }
 
+export async function touchLastSeen(user: User): Promise<void> {
+  const now = Date.now();
+  if (!user.lastSeenAt || now - user.lastSeenAt.getTime() > 60_000) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastSeenAt: new Date(now) },
+    });
+  }
+}
+
 export async function requireRole(...roles: Role[]) {
   const user = await getCurrentUser();
   if (!user) throw new Error("No autorizado");

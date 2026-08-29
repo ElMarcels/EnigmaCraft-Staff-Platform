@@ -36,6 +36,10 @@ model User {
   contactDiscord   String?
   contactEmail     String?
   contactOther     String?
+  timezone         String?
+  status           String?
+  lastSeenAt       DateTime?
+  contactUpdatedAt DateTime?
   active           Boolean   @default(true)
   suspendedUntil   DateTime?
   suspensionReason String?

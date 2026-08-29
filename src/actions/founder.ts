@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { getCurrentUserOrThrow, requireRole } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { createBackup } from "@/lib/backup";
+import { ROLE_META } from "@/lib/role-meta";
 import { Role } from "@prisma/client";
 
 export type UserFormState = { error?: string };
@@ -48,6 +49,28 @@ export async function createUserAction(
     },
   });
 
+  const roleMeta = ROLE_META[created.role];
+  const welcomeChannel = await prisma.channel.findFirst({
+    where: { name: "anuncios", type: "TEXT" },
+  });
+  if (welcomeChannel) {
+    await prisma.message.create({
+      data: {
+        channelId: welcomeChannel.id,
+        authorId: founder.id,
+        content: `👋 ¡Bienvenido/a ${created.displayName} (${roleMeta.label}) al staff de EnigmaCraft!`,
+      },
+    });
+  }
+  await prisma.announcement.create({
+    data: {
+      title: `Nuevo miembro: ${created.displayName}`,
+      content: `Demos la bienvenida a ${created.displayName} con el rango ${roleMeta.label}. ¡Salúdale en el chat!`,
+      priority: "normal",
+      authorId: founder.id,
+    },
+  });
+
   await audit({
     userId: founder.id,
     action: "USER_CREATE",
@@ -56,6 +79,8 @@ export async function createUserAction(
     details: `${username} (${role})`,
   });
   revalidatePath("/founder/users");
+  revalidatePath("/announcements");
+  revalidatePath("/chat");
   return {};
 }
 

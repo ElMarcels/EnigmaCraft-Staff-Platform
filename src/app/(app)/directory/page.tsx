@@ -1,9 +1,15 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Avatar, RoleBadge } from "@/components/role-badge";
 import { DirectorySelfCard } from "@/components/directory-self-card";
-import { IconClock } from "@/components/icons";
+import {
+  IconClock,
+  IconMail,
+  IconArrowRight,
+} from "@/components/icons";
+import { statusOf, isOnline } from "@/lib/role-meta";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +22,9 @@ type ContactPicker = {
   contactDiscord: string | null;
   contactEmail: string | null;
   contactOther: string | null;
+  timezone: string | null;
+  status: string | null;
+  lastSeenAt: Date | null;
   createdAt: Date;
 };
 
@@ -49,9 +58,18 @@ function ContactRow({
   );
 }
 
-function ContactCard({ user }: { user: ContactPicker }) {
+function ContactCard({
+  user,
+  isSelf,
+}: {
+  user: ContactPicker;
+  isSelf: boolean;
+}) {
+  const st = statusOf(user);
+  const online = isOnline(user.lastSeenAt);
+
   return (
-    <div className="card p-5">
+    <div className="card flex flex-col p-5">
       <div className="mb-4 flex items-center gap-3">
         <Avatar name={user.displayName} color={user.avatarColor} className="h-11 w-11 text-base" />
         <div className="min-w-0">
@@ -83,9 +101,51 @@ function ContactCard({ user }: { user: ContactPicker }) {
         </div>
       )}
 
-      <div className="mt-4 flex items-center gap-1.5 text-[11px] text-white/30">
-        <IconClock className="h-3.5 w-3.5" />
-        Miembro desde {user.createdAt.toLocaleDateString("es-ES")}
+      <div className="mt-3 space-y-1.5 text-xs">
+        {st ? (
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${st.dot}`} />
+            <span className={`font-semibold ${st.text}`}>{st.label}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-white/35">
+            <span className="h-2 w-2 rounded-full bg-white/20" />
+            Inactivo
+          </div>
+        )}
+        {user.lastSeenAt && !online ? (
+          <div className="flex items-center gap-1.5 text-white/30">
+            <IconClock className="h-3.5 w-3.5" />
+            Último acceso:{" "}
+            {new Date(user.lastSeenAt).toLocaleString("es-ES", {
+              day: "2-digit",
+              month: "short",
+            })}
+          </div>
+        ) : null}
+        {user.timezone ? (
+          <div className="flex items-center gap-1.5 text-white/30">
+            <IconClock className="h-3.5 w-3.5" />
+            {user.timezone}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-white/30">
+          <IconClock className="h-3.5 w-3.5" />
+          Miembro desde {new Date(user.createdAt).toLocaleDateString("es-ES")}
+        </div>
+        {!isSelf ? (
+          <Link
+            href={`/dm/${user.id}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-xs font-semibold text-indigo-300 transition-colors hover:bg-indigo-500/25"
+          >
+            <IconMail className="h-3.5 w-3.5" />
+            Escribirle
+            <IconArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
       </div>
     </div>
   );
@@ -107,6 +167,9 @@ export default async function DirectoryPage() {
       contactDiscord: true,
       contactEmail: true,
       contactOther: true,
+      timezone: true,
+      status: true,
+      lastSeenAt: true,
       createdAt: true,
     },
   });
@@ -116,7 +179,7 @@ export default async function DirectoryPage() {
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-white">Directorio de contactos</h1>
         <p className="text-sm text-white/40">
-          Datos de contacto del equipo. Cada miembro gestiona su propia ficha.
+          Datos de contacto, actividad y disponibilidad del equipo.
         </p>
       </header>
 
@@ -129,6 +192,9 @@ export default async function DirectoryPage() {
           contactDiscord: current.contactDiscord,
           contactEmail: current.contactEmail,
           contactOther: current.contactOther,
+          timezone: current.timezone,
+          status: current.status,
+          lastSeenAt: current.lastSeenAt,
           createdAt: current.createdAt,
         }}
       />
@@ -138,7 +204,7 @@ export default async function DirectoryPage() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {users.map((u) => (
-          <ContactCard key={u.id} user={u} />
+          <ContactCard key={u.id} user={u} isSelf={u.id === current.id} />
         ))}
       </div>
     </div>

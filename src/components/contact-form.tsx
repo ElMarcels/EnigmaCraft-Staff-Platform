@@ -13,6 +13,8 @@ type Props = {
     discord?: string | null;
     email?: string | null;
     other?: string | null;
+    timezone?: string | null;
+    status?: string | null;
   };
   redirectTo: ContactRedirect;
   submitLabel?: string;
@@ -78,6 +80,28 @@ export function ContactForm({
           placeholder="ej. Telegram, perfil en el foro…"
           defaultValue={defaults?.other || ""}
         />
+      </div>
+
+      <div>
+        <label className="label">Estado de actividad</label>
+        <select name="status" className="input" defaultValue={defaults?.status || ""}>
+          <option value="">En línea (automático)</option>
+          <option value="AWAY">Ausente</option>
+          <option value="VACATION">De vacaciones</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="label">Zona horaria (opcional)</label>
+        <input
+          name="timezone"
+          className="input"
+          placeholder="ej. Europe/Madrid, UTC-3…"
+          defaultValue={defaults?.timezone || ""}
+        />
+        <p className="mt-1 text-xs text-white/35">
+          Se muestra en tu ficha del directorio.
+        </p>
       </div>
 
       <button type="submit" disabled={pending} className="btn-primary w-full justify-center">
