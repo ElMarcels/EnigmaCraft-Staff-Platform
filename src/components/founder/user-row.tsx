@@ -78,12 +78,17 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
             disabled={pending}
             className="input !w-auto !py-1.5 text-sm"
           >
-            {ALL_ROLES.filter((r) => r !== "FOUNDER").map((r) => (
+            {ALL_ROLES.map((r) => (
               <option key={r} value={r}>
                 {ROLE_META[r].label}
               </option>
             ))}
           </select>
+          {role === "FOUNDER" && user.role !== "FOUNDER" ? (
+            <span className="text-[11px] text-amber-300/80">
+              Al guardar le darás acceso al panel de fundadores.
+            </span>
+          ) : null}
 
           <button
             onClick={toggleActive}

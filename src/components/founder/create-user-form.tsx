@@ -33,12 +33,16 @@ export function CreateUserForm() {
         <div>
           <label className="label">Rango</label>
           <select name="role" className="input">
-            {ALL_ROLES.filter((r) => r !== "FOUNDER").map((r) => (
+            {ALL_ROLES.map((r) => (
               <option key={r} value={r}>
                 {ROLE_META[r].label}
               </option>
             ))}
           </select>
+          <p className="mt-1 text-[11px] leading-snug text-white/35">
+            <span className="text-amber-300">Fundador</span> da acceso total,
+            incluido el panel exclusivo de fundadores.
+          </p>
         </div>
       </div>
       <button type="submit" disabled={pending} className="btn-primary">
