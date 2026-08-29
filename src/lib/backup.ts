@@ -12,19 +12,34 @@ export async function createBackup(opts: {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const name = `${opts.type === "automatic" ? "auto" : "backup"}-${timestamp}`;
 
-  const [users, categories, channels, messages, announcements, notifications, fileNodes] =
-    await Promise.all([
-      prisma.user.findMany(),
-      prisma.channelCategory.findMany(),
-      prisma.channel.findMany(),
-      prisma.message.findMany(),
-      prisma.announcement.findMany(),
-      prisma.notification.findMany(),
-      prisma.fileNode.findMany(),
-    ]);
+  const [
+    users,
+    categories,
+    channels,
+    messages,
+    announcements,
+    announcementReads,
+    notifications,
+    fileNodes,
+    directMessages,
+    messageReactions,
+    warnings,
+  ] = await Promise.all([
+    prisma.user.findMany(),
+    prisma.channelCategory.findMany(),
+    prisma.channel.findMany(),
+    prisma.message.findMany(),
+    prisma.announcement.findMany(),
+    prisma.announcementRead.findMany(),
+    prisma.notification.findMany(),
+    prisma.fileNode.findMany(),
+    prisma.directMessage.findMany(),
+    prisma.messageReaction.findMany(),
+    prisma.warning.findMany(),
+  ]);
 
   const snapshot = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     data: {
       users,
@@ -32,8 +47,12 @@ export async function createBackup(opts: {
       channels,
       messages,
       announcements,
+      announcementReads,
       notifications,
       fileNodes,
+      directMessages,
+      messageReactions,
+      warnings,
     },
   };
 

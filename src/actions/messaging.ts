@@ -4,6 +4,16 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUserOrThrow, requireRole } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { notifyMentions } from "@/lib/mentions";
+import { Role } from "@prisma/client";
+
+const ROLE_RANK: Record<Role, number> = {
+  FOUNDER: 5,
+  ADMIN: 4,
+  MOD: 3,
+  BUILDER: 2,
+  STAFF: 1,
+};
 
 export async function createCategory(formData: FormData) {
   await requireRole("FOUNDER");
@@ -100,7 +110,89 @@ export async function sendMessage(formData: FormData) {
     data: { channelId, authorId: user.id, content },
   });
 
-  revalidatePath(`/chat/${channelId}`);
+  await notifyMentions({
+    content,
+    authorId: user.id,
+    fromName: user.displayName,
+    location: `#${channel.name}`,
+    href: `/chat/${channelId}`,
+  });
+
+  revalidatePath("/chat");
+}
+
+export async function toggleReaction(messageId: string, emoji: string) {
+  const user = await getCurrentUserOrThrow();
+  const safe = emoji.replace(/[^\p{L}\p{N}\p{Emoji}]/gu, "").slice(0, 8);
+  if (!safe) return;
+
+  const existing = await prisma.messageReaction.findUnique({
+    where: {
+      messageId_userId_emoji: {
+        messageId,
+        userId: user.id,
+        emoji: safe,
+      },
+    },
+  });
+
+  if (existing) {
+    await prisma.messageReaction.delete({ where: { id: existing.id } });
+  } else {
+    const msg = await prisma.message.findUnique({ where: { id: messageId } });
+    if (!msg) return;
+    await prisma.messageReaction.create({
+      data: { messageId, userId: user.id, emoji: safe },
+    });
+  }
+  revalidatePath("/chat");
+}
+
+export async function sendDm(formData: FormData) {
+  const user = await getCurrentUserOrThrow();
+  const to = String(formData.get("to") || "").trim();
+  const content = String(formData.get("content") || "").trim();
+  if (!to || !content) return { error: "Mensaje vacío" };
+  if (to === user.id) return { error: "No puedes enviarte un mensaje directo a ti mismo" };
+
+  const recipient = await prisma.user.findUnique({ where: { id: to } });
+  if (!recipient || !recipient.active) {
+    return { error: "El usuario no existe o está inactivo" };
+  }
+
+  const senderRank = ROLE_RANK[user.role];
+  const recipientRank = ROLE_RANK[recipient.role];
+  if (recipientRank - senderRank >= 2) {
+    const prior = await prisma.directMessage.findFirst({
+      where: { senderId: recipient.id, recipientId: user.id },
+    });
+    if (!prior) {
+      return {
+        error: `${recipient.displayName} es de un rango superior al tuyo; solo puede iniciar la conversación un rango igual o superior.`,
+      };
+    }
+  }
+
+  await prisma.directMessage.create({
+    data: { senderId: user.id, recipientId: recipient.id, content },
+  });
+
+  await notifyMentions({
+    content,
+    authorId: user.id,
+    fromName: user.displayName,
+    location: `tu mensaje directo`,
+    href: `/dm/${user.id}`,
+  });
+
+  await audit({
+    userId: user.id,
+    action: "DM_SEND",
+    targetType: "User",
+    targetId: recipient.id,
+    details: `${user.username} → ${recipient.username}`,
+  });
+  revalidatePath("/dm");
 }
 
 export async function deleteMessage(messageId: string) {
@@ -126,22 +218,37 @@ export async function createAnnouncement(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
   const priority = String(formData.get("priority") || "normal");
+  const publishAtRaw = String(formData.get("publishAt") || "");
+  const requiresRead = formData.get("requiresRead") === "on";
   if (!title || !content) return;
 
+  const publishAt = publishAtRaw ? new Date(publishAtRaw) : null;
+  const publishesNow = !publishAt || publishAt.getTime() <= Date.now();
+
   const announcement = await prisma.announcement.create({
-    data: { title, content, priority, authorId: user.id },
+    data: {
+      title,
+      content,
+      priority,
+      authorId: user.id,
+      publishAt,
+      requiresRead,
+    },
   });
 
-  const staff = await prisma.user.findMany({ where: { active: true } });
-  for (const s of staff) {
-    await prisma.notification.create({
-      data: {
-        userId: s.id,
-        type: "ANNOUNCEMENT",
-        title: "Nuevo anuncio",
-        body: title,
-      },
-    });
+  if (publishesNow) {
+    const staff = await prisma.user.findMany({ where: { active: true } });
+    for (const s of staff) {
+      await prisma.notification.create({
+        data: {
+          userId: s.id,
+          type: "ANNOUNCEMENT",
+          title: "Nuevo anuncio",
+          body: title,
+          href: "/announcements",
+        },
+      });
+    }
   }
 
   await audit({
@@ -149,7 +256,19 @@ export async function createAnnouncement(formData: FormData) {
     action: "ANNOUNCEMENT_CREATE",
     targetType: "Announcement",
     targetId: announcement.id,
-    details: title,
+    details: `${title}${publishAt ? ` (programado ${publishAt.toISOString()})` : ""}`,
+  });
+  revalidatePath("/announcements");
+}
+
+export async function confirmAnnouncementRead(announcementId: string) {
+  const user = await getCurrentUserOrThrow();
+  await prisma.announcementRead.upsert({
+    where: {
+      announcementId_userId: { announcementId, userId: user.id },
+    },
+    create: { announcementId, userId: user.id },
+    update: {},
   });
   revalidatePath("/announcements");
 }

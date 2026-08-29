@@ -22,13 +22,32 @@ export default async function ChannelPage({
     prisma.message.findMany({
       where: { channelId },
       orderBy: { createdAt: "asc" },
-      include: { author: true },
+      include: { author: true, reactions: { include: { user: true } } },
       take: 200,
     }),
     getCurrentUser(),
   ]);
 
   const canDelete = !!user && ["FOUNDER", "ADMIN"].includes(user.role);
+
+  const reactionsById = (messageId: string) => {
+    const msg = messages.find((m) => m.id === messageId);
+    if (!msg) return [];
+    const grouped = new Map<string, { count: number; mine: boolean; users: string[] }>();
+    for (const r of msg.reactions) {
+      const cur = grouped.get(r.emoji) || { count: 0, mine: false, users: [] };
+      cur.count += 1;
+      cur.users.push(r.user.displayName);
+      if (user && r.userId === user.id) cur.mine = true;
+      grouped.set(r.emoji, cur);
+    }
+    return [...grouped.entries()].map(([emoji, v]) => ({
+      emoji,
+      count: v.count,
+      mine: v.mine,
+      users: v.users.slice(0, 8),
+    }));
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -66,6 +85,7 @@ export default async function ChannelPage({
           },
           canDelete:
             canDelete || (!!user && m.authorId === user.id),
+          reactions: reactionsById(m.id),
         }))}
       />
 

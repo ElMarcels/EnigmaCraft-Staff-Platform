@@ -148,6 +148,64 @@ export async function unsuspendUser(userId: string) {
   revalidatePath("/founder/users");
 }
 
+const WARNING_SUGGEST_THRESHOLD = 3;
+
+export async function addWarning(
+  formData: FormData
+): Promise<{ error?: string; suggestSuspend?: boolean }> {
+  const founder = await requireRole("FOUNDER");
+  const targetId = String(formData.get("userId") || "");
+  const reason = String(formData.get("reason") || "").trim();
+
+  const target = await prisma.user.findUnique({ where: { id: targetId } });
+  if (!target) return { error: "Usuario no encontrado" };
+  if (target.role === "FOUNDER") {
+    return { error: "No puedes advertir a otro fundador" };
+  }
+  if (reason.length < 3) {
+    return { error: "Escribe una razón (mínimo 3 caracteres)" };
+  }
+
+  await prisma.warning.create({
+    data: { userId: targetId, issuedById: founder.id, reason },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: targetId,
+      type: "SYSTEM",
+      title: "Advertencia recibida",
+      body: `Has recibido una advertencia: “${reason}”`,
+    },
+  });
+
+  const warningCount = await prisma.warning.count({ where: { userId: targetId } });
+  await audit({
+    userId: founder.id,
+    action: "USER_WARNING",
+    targetType: "User",
+    targetId,
+    details: `${target.username} (${warningCount}/suspender a los ${WARNING_SUGGEST_THRESHOLD}): ${reason}`,
+  });
+  revalidatePath("/founder/users");
+  return { suggestSuspend: warningCount >= WARNING_SUGGEST_THRESHOLD };
+}
+
+export async function removeWarning(warningId: string) {
+  const founder = await requireRole("FOUNDER");
+  const warning = await prisma.warning.findUnique({ where: { id: warningId } });
+  if (!warning) return;
+
+  await prisma.warning.delete({ where: { id: warningId } });
+  await audit({
+    userId: founder.id,
+    action: "USER_WARNING_REMOVE",
+    targetType: "Warning",
+    targetId: warningId,
+  });
+  revalidatePath("/founder/users");
+}
+
 export async function resetUserPassword(formData: FormData) {
   const founder = await requireRole("FOUNDER");
   const targetId = String(formData.get("userId") || "");

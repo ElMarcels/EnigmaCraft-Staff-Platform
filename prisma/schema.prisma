@@ -27,28 +27,34 @@ enum NotificationType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  displayName  String
-  role         Role     @default(STAFF)
-  avatarColor  String   @default("#6366f1")
-  active       Boolean  @default(true)
+  id               String    @id @default(cuid())
+  username         String    @unique
+  passwordHash     String
+  displayName      String
+  role             Role      @default(STAFF)
+  avatarColor      String    @default("#6366f1")
+  active           Boolean   @default(true)
   suspendedUntil   DateTime?
   suspensionReason String?
-  createdById  String?
-  createdBy    User?    @relation("CreatedBy", fields: [createdById], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdById      String?
+  createdBy        User?     @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  messages       Message[]
-  channelsOwned  Channel[]        @relation("ChannelCreator")
-  announcements  Announcement[]
-  filesUploaded  FileNode[]       @relation("FileUploader")
-  backups        Backup[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
-  createdUsers   User[]           @relation("CreatedBy")
+  messages           Message[]
+  channelsOwned      Channel[]          @relation("ChannelCreator")
+  announcements      Announcement[]
+  filesUploaded      FileNode[]         @relation("FileUploader")
+  backups            Backup[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  createdUsers       User[]             @relation("CreatedBy")
+  warnings           Warning[]
+  warningsIssued     Warning[]          @relation("WarningIssuer")
+  messageReactions   MessageReaction[]
+  directMessagesSent DirectMessage[]    @relation("DmSender")
+  directMessagesRcvd DirectMessage[]    @relation("DmRecipient")
+  announcementReads  AnnouncementRead[]
 }
 
 model ChannelCategory {
@@ -61,40 +67,98 @@ model ChannelCategory {
 }
 
 model Channel {
-  id          String      @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
-  type        ChannelType @default(TEXT)
-  position    Int         @default(0)
+  type        ChannelType     @default(TEXT)
+  position    Int             @default(0)
   categoryId  String
   category    ChannelCategory @relation("CategoryChannels", fields: [categoryId], references: [id])
   createdById String?
-  createdBy   User?       @relation("ChannelCreator", fields: [createdById], references: [id])
-  createdAt   DateTime    @default(now())
+  createdBy   User?           @relation("ChannelCreator", fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
 
   messages Message[]
 }
 
-model Message {
-  id         String   @id @default(cuid())
-  content    String
-  channelId  String
-  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  authorId   String
-  author     User     @relation(fields: [authorId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  edited     Boolean  @default(false)
+model MessageReaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model DirectMessage {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  sender      User     @relation("DmSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User     @relation("DmRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([senderId, recipientId])
 }
 
 model Announcement {
+  id           String    @id @default(cuid())
+  title        String
+  content      String
+  priority     String    @default("normal")
+  publishAt    DateTime?
+  requiresRead Boolean   @default(false)
+  authorId     String
+  author       User      @relation(fields: [authorId], references: [id])
+  createdAt    DateTime  @default(now())
+
+  reads AnnouncementRead[]
+}
+
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+}
+
+model Warning {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issuedById String?
+  issuedBy   User?    @relation("WarningIssuer", fields: [issuedById], references: [id], onDelete: SetNull)
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([issuedById])
+}
+
+model Message {
   id        String   @id @default(cuid())
-  title     String
   content   String
-  priority  String   @default("normal")
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  edited    Boolean  @default(false)
+
+  reactions MessageReaction[]
 }
 
 model Notification {
@@ -104,37 +168,38 @@ model Notification {
   type      NotificationType @default(SYSTEM)
   title     String
   body      String
+  href      String?
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
 }
 
 model FileNode {
-  id          String   @id @default(cuid())
-  name        String
-  isFolder    Boolean  @default(false)
-  size        Int      @default(0)
-  mimeType    String?
-  storageKey  String?
-  url         String?
-  parentId    String?
-  parent      FileNode?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  children    FileNode[] @relation("FolderChildren")
-  ownerId     String?
-  owner       User?    @relation("FileUploader", fields: [ownerId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String     @id @default(cuid())
+  name       String
+  isFolder   Boolean    @default(false)
+  size       Int        @default(0)
+  mimeType   String?
+  storageKey String?
+  url        String?
+  parentId   String?
+  parent     FileNode?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children   FileNode[] @relation("FolderChildren")
+  ownerId    String?
+  owner      User?      @relation("FileUploader", fields: [ownerId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Backup {
-  id        String   @id @default(cuid())
-  name      String
-  path      String
-  size      Int      @default(0)
-  status    String   @default("completed")
-  type      String   @default("automatic")
+  id          String   @id @default(cuid())
+  name        String
+  path        String
+  size        Int      @default(0)
+  status      String   @default("completed")
+  type        String   @default("automatic")
   createdById String?
-  creator   User?    @relation(fields: [createdById], references: [id])
-  createdAt DateTime @default(now())
+  creator     User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
 }
 
 model AuditLog {

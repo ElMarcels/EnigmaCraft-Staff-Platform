@@ -7,12 +7,14 @@ import {
   updateUserRole,
   suspendUserAction,
   unsuspendUser,
+  addWarning,
+  removeWarning,
   resetUserPassword,
   deleteUser,
 } from "@/actions/founder";
 import { RoleBadge, Avatar } from "@/components/role-badge";
 import { ALL_ROLES, ROLE_META } from "@/lib/role-meta";
-import { IconTrash, IconSettings, IconShield } from "@/components/icons";
+import { IconTrash, IconSettings, IconShield, IconAlertTriangle } from "@/components/icons";
 
 export type UserRowDTO = {
   id: string;
@@ -25,6 +27,12 @@ export type UserRowDTO = {
   avatarColor: string;
   createdAt: string;
   createdByName: string | null;
+  warnings: {
+    id: string;
+    reason: string;
+    createdAt: string;
+    issuedByName: string;
+  }[];
 };
 
 const DURATION_OPTIONS: { value: string; label: string }[] = [
@@ -47,9 +55,13 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
   const [suspendError, setSuspendError] = useState<string | null>(null);
   const [suspendDuration, setSuspendDuration] = useState("1w");
   const [suspendReason, setSuspendReason] = useState("");
+  const [warningsOpen, setWarningsOpen] = useState(false);
+  const [newWarning, setNewWarning] = useState("");
+  const [warnError, setWarnError] = useState<string | null>(null);
   const isFounder = user.role === "FOUNDER";
   const suspended = !user.active;
   const permanent = suspended && !user.suspendedUntil;
+  const warningCount = user.warnings.length;
 
   function changeRole(next: Role) {
     setRole(next);
@@ -82,6 +94,26 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
     startTransition(() => unsuspendUser(user.id).then(() => router.refresh()));
   }
 
+  function submitWarning() {
+    const fd = new FormData();
+    fd.set("userId", user.id);
+    fd.set("reason", newWarning);
+    startTransition(async () => {
+      const res = await addWarning(fd);
+      if (res?.error) {
+        setWarnError(res.error);
+      } else {
+        setNewWarning("");
+        setWarnError(null);
+        router.refresh();
+      }
+    });
+  }
+
+  function removeWarn(id: string) {
+    startTransition(() => removeWarning(id).then(() => router.refresh()));
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
       <Avatar name={user.displayName} color={user.avatarColor} />
@@ -109,6 +141,12 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
                   user.suspendedUntil as string
                 ).toLocaleString()}`}
             {user.suspensionReason ? ` · "${user.suspensionReason}"` : ""}
+          </div>
+        ) : null}
+        {warningCount >= 3 ? (
+          <div className="mt-1 flex items-center gap-1.5 rounded bg-amber-500/10 px-2 py-1 text-xs text-amber-300">
+            <IconAlertTriangle className="h-3.5 w-3.5" />
+            Ha acumulado {warningCount} advertencias. Considera suspender la cuenta.
           </div>
         ) : null}
       </div>
@@ -159,6 +197,18 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
               Suspender
             </button>
           )}
+
+          <button
+              onClick={() => {
+                setWarningsOpen((v) => !v);
+                setWarnError(null);
+              }}
+              disabled={pending}
+              className="btn-secondary !py-1.5"
+              title="Ver / añadir advertencias"
+            >
+              Advertencias ({warningCount})
+            </button>
 
           <div className="flex items-center gap-1">
             <button
@@ -244,6 +294,64 @@ export function UserRow({ user, isSelf }: { user: UserRowDTO; isSelf: boolean })
           {suspendError ? (
             <span className="basis-full text-xs text-red-300">{suspendError}</span>
           ) : null}
+        </div>
+      ) : null}
+
+      {warningsOpen && !isFounder ? (
+        <div className="basis-full space-y-2 pl-11">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <label className="label">
+                Nueva advertencia para @{user.username}
+              </label>
+              <input
+                value={newWarning}
+                onChange={(e) => setNewWarning(e.target.value)}
+                className="input"
+                placeholder="Razón de la advertencia"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={submitWarning}
+              disabled={pending || newWarning.trim().length < 3}
+              className="btn-primary !py-1.5"
+            >
+              Añadir
+            </button>
+          </div>
+          {warnError ? (
+            <div className="text-xs text-red-300">{warnError}</div>
+          ) : null}
+          {user.warnings.length === 0 ? (
+            <div className="text-xs text-white/40">
+              Sin advertencias registradas.
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {user.warnings.map((w) => (
+                <li
+                  key={w.id}
+                  className="flex items-center justify-between gap-3 rounded border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs"
+                >
+                  <div className="min-w-0">
+                    <span className="text-amber-300">⚠ {w.reason}</span>
+                    <span className="text-white/40">
+                      {" "}
+                      · {w.issuedByName} · {new Date(w.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeWarn(w.id)}
+                    className="shrink-0 text-white/30 hover:text-red-300"
+                    title="Retirar advertencia"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ) : null}
 

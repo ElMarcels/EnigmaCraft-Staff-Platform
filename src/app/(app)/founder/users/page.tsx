@@ -9,7 +9,10 @@ export default async function UsersPage() {
   const current = await getCurrentUser();
   const users = await prisma.user.findMany({
     orderBy: [{ role: "asc" }, { username: "asc" }],
-    include: { createdBy: true },
+    include: {
+      createdBy: true,
+      warnings: { orderBy: { createdAt: "desc" }, include: { issuedBy: true } },
+    },
   });
 
   return (
@@ -40,6 +43,12 @@ export default async function UsersPage() {
                 suspendedUntil: u.suspendedUntil?.toISOString() || null,
                 suspensionReason: u.suspensionReason,
                 avatarColor: u.avatarColor,
+                warnings: u.warnings.map((w) => ({
+                  id: w.id,
+                  reason: w.reason,
+                  createdAt: w.createdAt.toISOString(),
+                  issuedByName: w.issuedBy?.username || "—",
+                })),
                 createdAt: u.createdAt.toISOString(),
                 createdByName: u.createdBy?.displayName || null,
               }}

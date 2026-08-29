@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import Link from "next/link";
 import { IconBell } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function NotificationsPage() {
         <div className="space-y-2">
           {notifications.map((n) => {
             const meta = TYPE_META[n.type] || TYPE_META.SYSTEM;
-            return (
+            const inner = (
               <div key={n.id} className="card flex items-start gap-3">
                 <span className={`mt-0.5 shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase ${meta.color}`}>
                   {meta.label}
@@ -60,6 +61,13 @@ export default async function NotificationsPage() {
                   </div>
                 </div>
               </div>
+            );
+            return n.href ? (
+              <Link key={n.id} href={n.href} className="block transition-opacity hover:opacity-80">
+                {inner}
+              </Link>
+            ) : (
+              inner
             );
           })}
         </div>

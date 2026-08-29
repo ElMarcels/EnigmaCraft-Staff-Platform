@@ -31,6 +31,7 @@ export default async function DashboardPage() {
       prisma.fileNode.aggregate({ _sum: { size: true }, where: { isFolder: false } }),
       prisma.backup.count(),
       prisma.announcement.findMany({
+        where: { OR: [{ publishAt: null }, { publishAt: { lte: new Date() } }] },
         orderBy: { createdAt: "desc" },
         take: 4,
         include: { author: true },

@@ -6,9 +6,11 @@ import type { User, Role } from "@prisma/client";
 import { logoutAction } from "@/actions/auth";
 import { ROLE_META } from "@/lib/role-meta";
 import { Avatar } from "@/components/role-badge";
+import { GlobalSearch } from "@/components/global-search";
 import {
   IconDashboard,
   IconChat,
+  IconMail,
   IconFolder,
   IconMegaphone,
   IconShield,
@@ -30,6 +32,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Panel", icon: IconDashboard },
   { href: "/chat", label: "Chat", icon: IconChat },
+  { href: "/dm", label: "Mensajes", icon: IconMail },
   { href: "/files", label: "Archivos", icon: IconFolder },
   { href: "/announcements", label: "Anuncios", icon: IconMegaphone },
   {
@@ -139,6 +142,7 @@ export function AppShell({
         </div>
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+          <GlobalSearch userId={user.id} />
           {sections.map((section, i) => (
             <div key={i}>
               {section.title ? (
