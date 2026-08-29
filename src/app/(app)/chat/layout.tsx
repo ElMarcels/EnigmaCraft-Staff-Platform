@@ -17,8 +17,7 @@ export default async function ChatLayout({
     },
   });
 
-  const canManage =
-    !!user && ["FOUNDER", "ADMIN", "MOD"].includes(user.role);
+  const canManage = !!user && user.role === "FOUNDER";
 
   return (
     <div className="flex h-full overflow-hidden">

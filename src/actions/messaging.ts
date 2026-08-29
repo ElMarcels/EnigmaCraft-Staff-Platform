@@ -6,6 +6,7 @@ import { getCurrentUserOrThrow, requireRole } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 
 export async function createCategory(formData: FormData) {
+  await requireRole("FOUNDER");
   const user = await getCurrentUserOrThrow();
   const name = String(formData.get("name") || "").trim();
   if (!name) return;
@@ -28,7 +29,7 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function deleteCategory(categoryId: string) {
-  await requireRole("FOUNDER", "ADMIN");
+  await requireRole("FOUNDER");
   await prisma.channelCategory.delete({ where: { id: categoryId } });
   await audit({
     userId: (await getCurrentUserOrThrow()).id,
@@ -40,7 +41,7 @@ export async function deleteCategory(categoryId: string) {
 }
 
 export async function createChannel(formData: FormData) {
-  await requireRole("FOUNDER", "ADMIN", "MOD");
+  await requireRole("FOUNDER");
   const user = await getCurrentUserOrThrow();
   const name = String(formData.get("name") || "").trim();
   const categoryId = String(formData.get("categoryId") || "");
@@ -75,7 +76,7 @@ export async function createChannel(formData: FormData) {
 }
 
 export async function deleteChannel(channelId: string) {
-  await requireRole("FOUNDER", "ADMIN");
+  await requireRole("FOUNDER");
   await prisma.channel.delete({ where: { id: channelId } });
   await audit({
     userId: (await getCurrentUserOrThrow()).id,

@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ChannelCategory, Channel } from "@prisma/client";
-import { createCategory, createChannel } from "@/actions/messaging";
-import { IconPlus, IconHash, IconVolume } from "@/components/icons";
+import {
+  createCategory,
+  createChannel,
+  deleteChannel,
+} from "@/actions/messaging";
+import { IconPlus, IconHash, IconVolume, IconTrash } from "@/components/icons";
 
 type CatWithChannels = ChannelCategory & { channels: Channel[] };
 
@@ -17,8 +21,15 @@ export function ChatSidebar({
   canManage: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [addingCategory, setAddingCategory] = useState(false);
   const [addingTo, setAddingTo] = useState<string | null>(null);
+
+  async function removeChannel(id: string, name: string) {
+    if (!confirm(`¿Eliminar el canal #${name}?`)) return;
+    await deleteChannel(id);
+    router.refresh();
+  }
 
   return (
     <div className="flex h-full w-64 shrink-0 flex-col border-r border-white/10 bg-[#0d1017]">
@@ -88,23 +99,38 @@ export function ChatSidebar({
                 const active =
                   pathname === `/chat/${ch.id}`;
                 return (
-                  <Link
+                  <div
                     key={ch.id}
-                    href={`/chat/${ch.id}`}
-                    className={`flex items-center gap-2 rounded-md px-4 py-1.5 text-sm transition-colors ${
-                      active
-                        ? "bg-indigo-500/15 font-semibold text-indigo-200"
-                        : "text-white/50 hover:bg-white/5 hover:text-white"
+                    className={`group flex items-center rounded-md pr-1.5 transition-colors ${
+                      active ? "bg-indigo-500/15" : "hover:bg-white/5"
                     }`}
-                    title={ch.description || undefined}
                   >
-                    {ch.type === "VOICE" ? (
-                      <IconVolume className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <IconHash className="h-4 w-4 shrink-0" />
-                    )}
-                    <span className="truncate">{ch.name}</span>
-                  </Link>
+                    <Link
+                      href={`/chat/${ch.id}`}
+                      className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-4 py-1.5 text-sm transition-colors ${
+                        active
+                          ? "font-semibold text-indigo-200"
+                          : "text-white/50 hover:text-white"
+                      }`}
+                      title={ch.description || undefined}
+                    >
+                      {ch.type === "VOICE" ? (
+                        <IconVolume className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <IconHash className="h-4 w-4 shrink-0" />
+                      )}
+                      <span className="truncate">{ch.name}</span>
+                    </Link>
+                    {canManage ? (
+                      <button
+                        onClick={() => removeChannel(ch.id, ch.name)}
+                        className="shrink-0 rounded p-1 text-white/30 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
+                        title={`Eliminar canal #${ch.name}`}
+                      >
+                        <IconTrash className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
