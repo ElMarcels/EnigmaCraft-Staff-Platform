@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  FOUNDER
+  ADMIN
+  MOD
+  BUILDER
+  STAFF
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+}
+
+enum NotificationType {
+  MESSAGE_MENTION
+  ANNOUNCEMENT
+  SYSTEM
+  FILE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  displayName  String
+  role         Role     @default(STAFF)
+  avatarColor  String   @default("#6366f1")
+  active       Boolean  @default(true)
+  createdById  String?
+  createdBy    User?    @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages       Message[]
+  channelsOwned  Channel[]        @relation("ChannelCreator")
+  announcements  Announcement[]
+  filesUploaded  FileNode[]       @relation("FileUploader")
+  backups        Backup[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+  createdUsers   User[]           @relation("CreatedBy")
+}
+
+model ChannelCategory {
+  id        String   @id @default(cuid())
+  name      String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  channels Channel[] @relation("CategoryChannels")
+}
+
+model Channel {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  type        ChannelType @default(TEXT)
+  position    Int         @default(0)
+  categoryId  String
+  category    ChannelCategory @relation("CategoryChannels", fields: [categoryId], references: [id])
+  createdById String?
+  createdBy   User?       @relation("ChannelCreator", fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  messages Message[]
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  channelId  String
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  edited     Boolean  @default(false)
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  priority  String   @default("normal")
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(SYSTEM)
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+}
+
+model FileNode {
+  id          String   @id @default(cuid())
+  name        String
+  isFolder    Boolean  @default(false)
+  size        Int      @default(0)
+  mimeType    String?
+  storageKey  String?
+  parentId    String?
+  parent      FileNode?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children    FileNode[] @relation("FolderChildren")
+  ownerId     String?
+  owner       User?    @relation("FileUploader", fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  name      String
+  path      String
+  size      Int      @default(0)
+  status    String   @default("completed")
+  type      String   @default("automatic")
+  createdById String?
+  creator   User?    @relation(fields: [createdById], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String?
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
