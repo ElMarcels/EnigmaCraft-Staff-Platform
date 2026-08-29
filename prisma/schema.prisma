@@ -33,6 +33,9 @@ model User {
   displayName      String
   role             Role      @default(STAFF)
   avatarColor      String    @default("#6366f1")
+  contactDiscord   String?
+  contactEmail     String?
+  contactOther     String?
   active           Boolean   @default(true)
   suspendedUntil   DateTime?
   suspensionReason String?

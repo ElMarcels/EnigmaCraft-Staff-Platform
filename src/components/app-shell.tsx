@@ -11,6 +11,7 @@ import {
   IconDashboard,
   IconChat,
   IconMail,
+  IconContact,
   IconFolder,
   IconMegaphone,
   IconShield,
@@ -35,6 +36,7 @@ const NAV: NavItem[] = [
   { href: "/dm", label: "Mensajes", icon: IconMail },
   { href: "/files", label: "Archivos", icon: IconFolder },
   { href: "/announcements", label: "Anuncios", icon: IconMegaphone },
+  { href: "/directory", label: "Contactos", icon: IconContact },
   {
     href: "/founder",
     label: "Panel de Fundadores",

@@ -69,6 +69,12 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
+export function hasContactInfo(
+  user: Pick<User, "contactDiscord">
+): boolean {
+  return Boolean(user.contactDiscord?.trim());
+}
+
 export function suspensionInfoFor(user: User): SuspensionInfo | null {
   if (user.active) return null;
   if (user.suspendedUntil && user.suspendedUntil.getTime() <= Date.now()) {
