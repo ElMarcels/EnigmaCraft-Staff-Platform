@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { MessageList } from "@/components/message-list";
-import { MessageComposer } from "@/components/message-composer";
+import { ChatChannelView } from "@/components/chat-channel-view";
+import { ChannelMemberDTO } from "@/components/channel-members-sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,14 @@ const DEMO_CHANNEL_MESSAGES: Record<string, any[]> = {
   ],
 };
 
+const DEMO_MEMBERS: ChannelMemberDTO[] = [
+  { id: "1", displayName: "Marcel", username: "marcel", role: "FOUNDER", avatarColor: "#f43f5e", isOnline: true, statusText: "Desarrollando plataforma" },
+  { id: "2", displayName: "AlexAdmin", username: "alex_sys", role: "ADMIN", avatarColor: "#e11d48", isOnline: true, statusText: "Monitoreando TPS" },
+  { id: "3", displayName: "LucasMod", username: "lucas_guard", role: "MOD", avatarColor: "#06b6d4", isOnline: true, statusText: "Atendiendo tickets" },
+  { id: "4", displayName: "ElenaBuilder", username: "elena_arch", role: "BUILDER", avatarColor: "#10b981", isOnline: true, statusText: "Construyendo lobby" },
+  { id: "5", displayName: "SofiaStaff", username: "sofia_helper", role: "STAFF", avatarColor: "#a855f7", isOnline: false, statusText: "Desconectada" },
+];
+
 export default async function ChannelPage({
   params,
 }: {
@@ -45,12 +53,20 @@ export default async function ChannelPage({
   };
 
   let messages: any[] = DEMO_CHANNEL_MESSAGES[channelId] || DEMO_CHANNEL_MESSAGES.general;
+  let members: ChannelMemberDTO[] = DEMO_MEMBERS;
 
   try {
-    const dbChannel = await prisma.channel.findUnique({
-      where: { id: channelId },
-      include: { category: true },
-    });
+    const [dbChannel, dbUsers] = await Promise.all([
+      prisma.channel.findUnique({
+        where: { id: channelId },
+        include: { category: true },
+      }),
+      prisma.user.findMany({
+        where: { active: true },
+        orderBy: [{ role: "asc" }, { username: "asc" }],
+      }),
+    ]);
+
     if (dbChannel) {
       channel = dbChannel;
       const dbMessages = await prisma.message.findMany({
@@ -62,6 +78,18 @@ export default async function ChannelPage({
       if (dbMessages.length > 0) {
         messages = dbMessages;
       }
+    }
+
+    if (dbUsers && dbUsers.length > 0) {
+      members = dbUsers.map((u) => ({
+        id: u.id,
+        displayName: u.displayName,
+        username: u.username,
+        role: u.role,
+        avatarColor: u.avatarColor,
+        isOnline: u.lastSeenAt ? Date.now() - new Date(u.lastSeenAt).getTime() < 300000 : false,
+        statusText: u.status || undefined,
+      }));
     }
   } catch {
     // Graceful fallback
@@ -76,7 +104,7 @@ export default async function ChannelPage({
     for (const r of msg.reactions) {
       const cur = grouped.get(r.emoji) || { count: 0, mine: false, users: [] };
       cur.count += 1;
-      cur.users.push(r.user.displayName);
+      cur.users.push(r.user?.displayName || "Usuario");
       if (user && r.userId === user.id) cur.mine = true;
       grouped.set(r.emoji, cur);
     }
@@ -89,45 +117,33 @@ export default async function ChannelPage({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-white/10 px-5 py-3 bg-white/[0.01]">
-        <div className="flex items-center gap-2 text-white">
-          <span className="font-semibold text-base">#{channel.name}</span>
-          {channel.type === "VOICE" ? (
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white/50">
-              Voz
-            </span>
-          ) : null}
-        </div>
-        {channel.description ? (
-          <p className="mt-0.5 text-xs text-slate-400">{channel.description}</p>
-        ) : null}
-        <span className="text-[11px] text-slate-500">
-          {channel.category.name} · {user ? `Conectado como ${user.displayName}` : ""}
-        </span>
-      </div>
-
-      <MessageList
-        messages={messages.map((m) => ({
-          id: m.id,
-          content: m.content,
-          createdAt: typeof m.createdAt === "string" ? m.createdAt : m.createdAt.toISOString(),
-          edited: m.edited || false,
-          author: {
-            id: m.author.id,
-            displayName: m.author.displayName,
-            avatarColor: m.author.avatarColor,
-            role: m.author.role,
-            discord: m.author.contactDiscord,
-            lastSeenAt: m.author.lastSeenAt ? (typeof m.author.lastSeenAt === "string" ? m.author.lastSeenAt : m.author.lastSeenAt.toISOString()) : null,
-            status: m.author.status,
-          },
-          canDelete: canDelete || (!!user && m.authorId === user.id),
-          reactions: reactionsById(m.id),
-        }))}
-      />
-
-      {channel.type === "VOICE" ? null : <MessageComposer channelId={channel.id} />}
-    </div>
+    <ChatChannelView
+      channel={{
+        id: channel.id,
+        name: channel.name,
+        type: channel.type,
+        description: channel.description,
+        categoryName: channel.category?.name || "CANALES",
+      }}
+      messages={messages.map((m) => ({
+        id: m.id,
+        content: m.content,
+        createdAt: typeof m.createdAt === "string" ? m.createdAt : m.createdAt.toISOString(),
+        edited: m.edited || false,
+        author: {
+          id: m.author?.id || "1",
+          displayName: m.author?.displayName || "Marcel",
+          avatarColor: m.author?.avatarColor || "#f43f5e",
+          role: m.author?.role || "FOUNDER",
+          discord: m.author?.contactDiscord || null,
+          lastSeenAt: m.author?.lastSeenAt ? (typeof m.author.lastSeenAt === "string" ? m.author.lastSeenAt : m.author.lastSeenAt.toISOString()) : null,
+          status: m.author?.status || "En línea",
+        },
+        canDelete: canDelete || (!!user && m.authorId === user.id),
+        reactions: reactionsById(m.id),
+      }))}
+      userDisplayName={user?.displayName || "Marcel"}
+      members={members}
+    />
   );
 }

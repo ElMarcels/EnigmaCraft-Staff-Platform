@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Avatar, RoleBadge } from "@/components/role-badge";
+import { ServerStatusWidget } from "@/components/server-status-widget";
 import {
   IconUsers,
   IconChat,
@@ -211,6 +212,9 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Minecraft Network Real-Time Status Widget */}
+      <ServerStatusWidget />
 
       {/* Online Staff and Recent Announcements Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

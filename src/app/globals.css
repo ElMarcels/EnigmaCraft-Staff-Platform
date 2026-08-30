@@ -29,6 +29,42 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+[data-theme="amethyst"] {
+  --ruby-primary: #a855f7;
+  --ruby-light: #c084fc;
+  --ruby-glow: rgba(168, 85, 247, 0.35);
+  --ruby-glow-soft: rgba(168, 85, 247, 0.15);
+  --ruby-surface: rgba(168, 85, 247, 0.08);
+  --ruby-border: rgba(168, 85, 247, 0.25);
+}
+
+[data-theme="emerald"] {
+  --ruby-primary: #10b981;
+  --ruby-light: #34d399;
+  --ruby-glow: rgba(16, 185, 129, 0.35);
+  --ruby-glow-soft: rgba(16, 185, 129, 0.15);
+  --ruby-surface: rgba(16, 185, 129, 0.08);
+  --ruby-border: rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="cyan"] {
+  --ruby-primary: #06b6d4;
+  --ruby-light: #22d3ee;
+  --ruby-glow: rgba(6, 182, 212, 0.35);
+  --ruby-glow-soft: rgba(6, 182, 212, 0.15);
+  --ruby-surface: rgba(6, 182, 212, 0.08);
+  --ruby-border: rgba(6, 182, 212, 0.25);
+}
+
+[data-theme="amber"] {
+  --ruby-primary: #f59e0b;
+  --ruby-light: #fbbf24;
+  --ruby-glow: rgba(245, 158, 11, 0.35);
+  --ruby-glow-soft: rgba(245, 158, 11, 0.15);
+  --ruby-surface: rgba(245, 158, 11, 0.08);
+  --ruby-border: rgba(245, 158, 11, 0.25);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

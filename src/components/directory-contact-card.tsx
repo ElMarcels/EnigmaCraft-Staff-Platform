@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Avatar, RoleBadge } from "@/components/role-badge";
@@ -7,6 +8,7 @@ import {
   IconClock,
   IconMail,
   IconArrowRight,
+  IconCheck,
 } from "@/components/icons";
 import { statusOf, isOnline } from "@/lib/role-meta";
 import type { Role } from "@prisma/client";
@@ -36,11 +38,15 @@ export function DirectoryContactCard({
   const st = statusOf({ status: user.status, lastSeenAt: user.lastSeenAt });
   const online = isOnline(user.lastSeenAt);
 
+  const [copied, setCopied] = useState(false);
+
   function copyDiscord(tag: string) {
     navigator.clipboard.writeText(tag);
+    setCopied(true);
     toast.success(`Copiado @${tag} al portapapeles`, {
       description: "Puedes pegarlo directamente en Discord.",
     });
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -84,9 +90,16 @@ export function DirectoryContactCard({
               <button
                 type="button"
                 onClick={() => copyDiscord(user.contactDiscord!)}
-                className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95"
+                className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95 flex items-center gap-1"
               >
-                Copiar
+                {copied ? (
+                  <>
+                    <IconCheck className="h-3 w-3 text-emerald-400" />
+                    <span className="text-emerald-300">Copiado</span>
+                  </>
+                ) : (
+                  "Copiar"
+                )}
               </button>
             </div>
           ) : (
