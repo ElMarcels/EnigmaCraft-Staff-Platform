@@ -10,7 +10,6 @@ import {
   IconFolder,
   IconRefresh,
   IconDownload,
-  IconFile,
 } from "@/components/icons";
 
 export function CloudImporterModal({
@@ -33,7 +32,7 @@ export function CloudImporterModal({
   const [gdriveFolderName, setGdriveFolderName] = useState("Google Drive - Documentos & Plugins");
   const [gdriveApiKey, setGdriveApiKey] = useState("");
   const [gdriveFileListText, setGdriveFileListText] = useState(
-    "Normativa_Staff.docx\nRegistro_Sanciones.xlsx\nEconomia_Servidor.xlsx\nGuia_Comandos_EnigmaCraft.docx\nEnigmaCore.jar\nconfig.yml\npermissions.yml"
+    "documentos/Normativa_Staff.docx\ndocumentos/Registro_Sanciones.xlsx\neconomia/Economia_Servidor.xlsx\nguias/Guia_Comandos_EnigmaCraft.docx\nplugins/EnigmaCore.jar\nplugins/config.yml\nplugins/permissions.yml"
   );
   const [gdriveLoading, setGdriveLoading] = useState(false);
 
@@ -52,6 +51,42 @@ export function CloudImporterModal({
     return match ? match[1] : null;
   }
 
+  // Recursive scanner for Google Drive API
+  async function scanGDriveFolder(
+    currentFolderId: string,
+    currentPath: string,
+    apiKey: string
+  ): Promise<string[]> {
+    const q = encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`);
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=100&key=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
+
+    if (!data.files || data.files.length === 0) {
+      return currentPath ? [`${currentPath}/`] : [];
+    }
+
+    const items: string[] = [];
+    for (const file of data.files) {
+      const fullPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+      if (file.mimeType === "application/vnd.google-apps.folder") {
+        const nested = await scanGDriveFolder(file.id, fullPath, apiKey);
+        if (nested.length === 0) {
+          items.push(`${fullPath}/`);
+        } else {
+          items.push(...nested);
+        }
+      } else {
+        items.push(fullPath);
+      }
+    }
+    return items;
+  }
+
   async function fetchGoogleDriveWithApiKey() {
     const folderId = extractGDriveFolderId(gdriveLink);
     if (!folderId) {
@@ -59,7 +94,7 @@ export function CloudImporterModal({
       return;
     }
     if (!gdriveApiKey.trim()) {
-      toast.info("Introduce una Google Cloud API Key para escanear en vivo mediante la API de Google Drive.");
+      toast.info("Introduce tu Google Cloud API Key para escanear en vivo.");
       return;
     }
 
@@ -67,23 +102,20 @@ export function CloudImporterModal({
     sounds.playPop();
 
     try {
-      const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-      const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,size)&key=${gdriveApiKey.trim()}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const scannedPaths = await scanGDriveFolder(folderId, "", gdriveApiKey.trim());
 
-      if (data.error) {
-        toast.error("Error en API de Google Drive: " + data.error.message);
-      } else if (data.files && data.files.length > 0) {
-        const fileNames = data.files.map((f: { name: string }) => f.name).join("\n");
-        setGdriveFileListText(fileNames);
+      if (scannedPaths.length > 0) {
+        setGdriveFileListText(scannedPaths.join("\n"));
         sounds.playSuccess();
-        toast.success(`¡Se encontraron ${data.files.length} archivos reales en tu Google Drive!`);
+        toast.success(`¡Estructura de Google Drive escaneada con éxito!`, {
+          description: `Se detectaron ${scannedPaths.length} elementos y subcarpetas reales.`,
+        });
       } else {
         toast.warning("La carpeta está vacía o no tiene permisos públicos.");
       }
-    } catch {
-      toast.error("Error de conexión con la API de Google Drive.");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("Error al escanear Google Drive: " + errorMsg);
     } finally {
       setGdriveLoading(false);
     }
@@ -104,14 +136,16 @@ export function CloudImporterModal({
       .map((l) => l.trim())
       .filter(Boolean);
 
-    // Parse each line (supports 'Nombre.docx', 'Nombre.xlsx', 'carpeta/subarchivo.yml')
+    // Parse each line (supports 'carpeta/', 'carpeta/subcarpeta/archivo.yml', 'doc.docx')
     const realFiles = rawLines.map((line) => {
       const cleanPath = line.replace(/\\/g, "/");
-      const name = cleanPath.split("/").pop() || cleanPath;
+      const isExplicitFolder = cleanPath.endsWith("/") || !cleanPath.includes(".");
+      const name = cleanPath.replace(/\/+$/, "").split("/").pop() || cleanPath;
       const ext = name.split(".").pop()?.toLowerCase() || "";
 
       let size = 15000;
-      if (["docx", "doc"].includes(ext)) size = 28500;
+      if (isExplicitFolder) size = 0;
+      else if (["docx", "doc"].includes(ext)) size = 28500;
       else if (["xlsx", "xls", "csv"].includes(ext)) size = 45200;
       else if (["jar", "zip", "schem"].includes(ext)) size = 5240000;
       else if (["yml", "yaml", "json"].includes(ext)) size = 12400;
@@ -120,6 +154,7 @@ export function CloudImporterModal({
         name,
         relativePath: cleanPath,
         size,
+        isFolder: isExplicitFolder,
       };
     });
 
@@ -128,6 +163,7 @@ export function CloudImporterModal({
         name: "Google_Drive_Enlace.url",
         relativePath: "Google_Drive_Enlace.url",
         size: 1024,
+        isFolder: false,
       });
     }
 
@@ -137,8 +173,8 @@ export function CloudImporterModal({
       await syncLocalDirectoryAction(cleanFolder, realFiles, parentId);
       setGdriveLoading(false);
       sounds.playSuccess();
-      toast.success(`¡Carpeta de Google Drive vinculada con éxito!`, {
-        description: `Se han importado ${realFiles.length} archivos reales en "${cleanFolder}".`,
+      toast.success(`¡Google Drive importado con jerarquía de subcarpetas!`, {
+        description: `Se han creado las carpetas y archivos en "${cleanFolder}".`,
       });
       if (onImportComplete) onImportComplete();
       onClose();
@@ -167,7 +203,7 @@ export function CloudImporterModal({
       } else {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const files = data.map((item: { name: string; size?: number; download_url?: string }) => ({
+          const files = data.map((item: { name: string; size?: number; download_url?: string; type?: string }) => ({
             name: item.name,
             size: item.size || 2048,
             download_url: item.download_url,
@@ -225,7 +261,7 @@ export function CloudImporterModal({
                 Vincular Google Drive & GitHub
               </h2>
               <p className="text-xs text-slate-400">
-                Sincroniza tus carpetas de Google Drive, documentos Word, hojas Excel y repositorios.
+                Sincroniza tus carpetas de Google Drive, documentos Word, hojas Excel y repositorios conservando todas las subcarpetas.
               </p>
             </div>
           </div>
@@ -320,29 +356,29 @@ export function CloudImporterModal({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-bold uppercase text-slate-300">
-                    Archivos de tu Google Drive (1 por línea o con subcarpetas)
+                    Estructura de Archivos y Subcarpetas
                   </label>
                   <span className="text-[10px] text-slate-500 font-mono">
-                    {gdriveFileListText.split("\n").filter(Boolean).length} archivos configurados
+                    {gdriveFileListText.split("\n").filter(Boolean).length} elementos
                   </span>
                 </div>
                 <textarea
                   value={gdriveFileListText}
                   onChange={(e) => setGdriveFileListText(e.target.value)}
                   rows={5}
-                  placeholder={`Normativa_Staff.docx\nRegistro_Sanciones.xlsx\nEconomia_Servidor.xlsx\nplugins/config.yml\nschematics/Lobby.schem`}
+                  placeholder={`subcarpeta/\nsubcarpeta/archivo.docx\nplugins/config.yml\nRegistro_Sanciones.xlsx`}
                   className="input font-mono text-xs leading-relaxed resize-none"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Puedes escribir o pegar los nombres reales de los documentos Word (.docx), tablas Excel (.xlsx), configs (.yml) o esquemáticos (.schem) que tienes en esa carpeta compartida.
+                  💡 <strong>Tip:</strong> Si una línea es una carpeta escribe <code>nombre_carpeta/</code> (con la barra al final) o <code>carpeta/archivo.yml</code> para colocarlo en su subcarpeta correspondiente.
                 </p>
               </div>
 
               {/* Optional Google Cloud API Key */}
-              <div className="rounded-2xl border border-white/[0.08] bg-black/30 p-3 space-y-2">
+              <div className="rounded-2xl border border-white/[0.08] bg-black/30 p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-300">
-                    Auto-escaneo con Google Cloud API Key (Opcional)
+                    Auto-escaneo Recursivo con API Key de Google Drive
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -350,7 +386,7 @@ export function CloudImporterModal({
                     type="password"
                     value={gdriveApiKey}
                     onChange={(e) => setGdriveApiKey(e.target.value)}
-                    placeholder="AIzaSy..."
+                    placeholder="Pega aquí tu clave: AIzaSy..."
                     className="input text-xs font-mono flex-1"
                   />
                   <button
@@ -360,9 +396,12 @@ export function CloudImporterModal({
                     className="btn-secondary text-xs font-semibold px-4 flex items-center gap-1.5 shrink-0"
                   >
                     <IconRefresh className={`h-3.5 w-3.5 ${gdriveLoading ? "animate-spin" : ""}`} />
-                    Auto-Escanear
+                    {gdriveLoading ? "Escaneando subcarpetas..." : "Auto-Escanear"}
                   </button>
                 </div>
+                <p className="text-[10px] text-slate-500">
+                  Escanea automáticamente todas las subcarpetas del interior y sus archivos de forma recursiva.
+                </p>
               </div>
 
               <div className="flex justify-end pt-2">

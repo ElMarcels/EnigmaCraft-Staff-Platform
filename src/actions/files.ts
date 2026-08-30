@@ -108,6 +108,7 @@ export type SyncedFileDTO = {
   name: string;
   relativePath: string;
   size: number;
+  isFolder?: boolean;
 };
 
 export async function syncLocalDirectoryAction(
@@ -156,6 +157,18 @@ export async function syncLocalDirectoryAction(
       });
 
       if (!subFolder) {
+        // If a non-folder file with same name exists by accident, delete it first to avoid collision
+        const accidentFile = await prisma.fileNode.findFirst({
+          where: {
+            name: cleanSubName,
+            isFolder: false,
+            parentId: currentParentId,
+          },
+        });
+        if (accidentFile) {
+          await prisma.fileNode.delete({ where: { id: accidentFile.id } });
+        }
+
         subFolder = await prisma.fileNode.create({
           data: {
             name: cleanSubName,
@@ -175,6 +188,22 @@ export async function syncLocalDirectoryAction(
   // Create files and nested subfolders
   for (const f of files) {
     const rawPath = f.relativePath.replace(/\\/g, "/");
+
+    // If it is explicitly a folder or ends with a slash
+    if (f.isFolder || rawPath.endsWith("/")) {
+      const folderSegments = rawPath.replace(/\/+$/, "").split("/").filter(Boolean);
+      if (
+        folderSegments.length > 0 &&
+        folderSegments[0].toLowerCase() === cleanFolderName.toLowerCase()
+      ) {
+        folderSegments.shift();
+      }
+      if (folderSegments.length > 0) {
+        await ensureFolderPath(folderSegments, rootFolder.id);
+      }
+      continue;
+    }
+
     const segments = rawPath.split("/").filter(Boolean);
 
     // If relative path begins with the root folder name, shift it
