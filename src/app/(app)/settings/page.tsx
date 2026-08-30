@@ -9,32 +9,37 @@ export default async function SettingsPage() {
   if (!user) return null;
 
   return (
-    <div className="p-6">
+    <div className="p-6 md:p-8 space-y-6 max-w-4xl mx-auto pb-28">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Ajustes de la cuenta</h1>
-        <p className="text-sm text-white/40">Tu perfil y tu seguridad.</p>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Ajustes de la cuenta</h1>
+        <p className="text-sm font-medium text-slate-400 mt-1">Configuración de perfil, credenciales y seguridad del staff.</p>
       </header>
 
-      <div className="card mb-6 max-w-md">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-white/50">
-          Tu perfil
+      <div className="glass-card p-6 mb-6">
+        <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+          Tu perfil de Staff
         </h2>
-        <div className="flex items-center gap-3">
-          <Avatar name={user.displayName} color={user.avatarColor} className="h-12 w-12 text-xl" />
+        <div className="flex items-center gap-4">
+          <Avatar name={user.displayName} color={user.avatarColor} className="h-14 w-14 text-xl" />
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-white">{user.displayName}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold text-lg text-white">{user.displayName}</span>
               <RoleBadge role={user.role} />
             </div>
-            <div className="text-sm text-white/40">@{user.username}</div>
-            <div className="text-xs text-white/30">
-              Miembro desde {new Date(user.createdAt).toLocaleDateString()}
+            <div className="text-xs text-slate-400">@{user.username} · {user.contactDiscord ? `Discord: ${user.contactDiscord}` : ""}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">
+              Miembro registrado desde {new Date(user.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
             </div>
           </div>
         </div>
       </div>
 
-      <SettingsForm displayName={user.displayName} />
+      <div className="glass-card p-6">
+        <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+          Seguridad & Contraseña
+        </h2>
+        <SettingsForm displayName={user.displayName} />
+      </div>
     </div>
   );
 }

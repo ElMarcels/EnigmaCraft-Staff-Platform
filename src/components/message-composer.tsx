@@ -27,10 +27,10 @@ export function MessageComposer({ channelId }: { channelId: string }) {
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="border-t border-white/10 p-4"
+      className="border-t border-white/[0.08] p-4 bg-[#080b12]/80 backdrop-blur-xl"
     >
       <input type="hidden" name="channelId" value={channelId} />
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-2 max-w-5xl mx-auto">
         <textarea
           name="content"
           value={text}
@@ -41,17 +41,24 @@ export function MessageComposer({ channelId }: { channelId: string }) {
               (e.currentTarget.form as HTMLFormElement).requestSubmit();
             }
           }}
-          placeholder={`Escribe un mensaje…`}
+          placeholder="Escribe un mensaje en el canal (Enter para enviar, Shift+Enter para salto)..."
           rows={1}
-          className="input max-h-40 min-h-[44px] resize-none py-2.5"
+          className="input max-h-36 min-h-[44px] resize-none py-2.5 px-4 text-sm"
         />
         <button
           type="submit"
           disabled={!text.trim() || pending}
-          className="btn-primary shrink-0"
-          title="Enviar"
+          className="btn-primary h-11 px-4 shrink-0 font-semibold"
+          title="Enviar mensaje"
         >
-          <IconSend />
+          {pending ? (
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+          ) : (
+            <IconSend className="h-4 w-4" />
+          )}
         </button>
       </div>
     </form>

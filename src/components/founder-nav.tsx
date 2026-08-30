@@ -4,16 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/founder", label: "Panel" },
-  { href: "/founder/users", label: "Usuarios" },
-  { href: "/founder/backups", label: "Copias de seguridad" },
-  { href: "/founder/audit", label: "Registro de actividad" },
+  { href: "/founder", label: "Consola" },
+  { href: "/founder/users", label: "Usuarios & Rangos" },
+  { href: "/founder/backups", label: "Copias de Seguridad" },
+  { href: "/founder/audit", label: "Auditoría" },
 ];
 
 export function FounderNav() {
   const pathname = usePathname();
+
   return (
-    <nav className="flex gap-1 border-b border-white/10 bg-[#0d1017] px-6">
+    <nav className="flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/[0.08] overflow-x-auto max-w-full">
       {TABS.map((t) => {
         const active =
           t.href === "/founder"
@@ -23,10 +24,10 @@ export function FounderNav() {
           <Link
             key={t.href}
             href={t.href}
-            className={`-mb-px border-b-2 px-3 py-2.5 text-sm transition-colors ${
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer select-none ${
               active
-                ? "border-amber-400 font-semibold text-amber-300"
-                : "border-transparent text-white/50 hover:text-white"
+                ? "bg-gradient-to-r from-rose-600 to-red-700 text-white shadow-md shadow-rose-950/60 border border-white/20"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
             }`}
           >
             {t.label}

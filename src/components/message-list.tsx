@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { deleteMessage, toggleReaction } from "@/actions/messaging";
 import { Avatar, RoleBadge } from "@/components/role-badge";
-import { IconTrash, IconPlus } from "@/components/icons";
+import { IconTrash, IconPlus, IconChat, IconCheck } from "@/components/icons";
 import { statusOf } from "@/lib/role-meta";
 import type { Role } from "@prisma/client";
 
@@ -34,7 +34,7 @@ export type MessageDTO = {
   reactions: ReactionDTO[];
 };
 
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "🔥"];
+const QUICK_REACTIONS = ["+1", "OK", "CORRECTO", "REPORT", "FIX"];
 
 function Mentioned({ text }: { text: string }) {
   const parts = text.split(/(@[a-zA-Z0-9_]{2,32})/g);
@@ -44,7 +44,7 @@ function Mentioned({ text }: { text: string }) {
         i === 0 || !p.startsWith("@") ? (
           p
         ) : (
-          <span key={i} className="rounded bg-indigo-500/20 px-1 font-semibold text-indigo-300">
+          <span key={i} className="rounded-md bg-rose-500/20 px-1.5 py-0.5 font-semibold text-rose-300 border border-rose-500/30">
             {p}
           </span>
         )
@@ -68,15 +68,19 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
     return () => clearInterval(id);
   }, [router]);
 
-  function react(messageId: string, emoji: string) {
+  function react(messageId: string, tag: string) {
     setPalette(null);
-    toggleReaction(messageId, emoji).then(() => router.refresh());
+    toggleReaction(messageId, tag).then(() => router.refresh());
   }
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-white/30">
-        Todavía no hay mensajes en este canal.
+      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-slate-400">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] text-rose-400 mb-3">
+          <IconChat className="h-6 w-6" />
+        </div>
+        <p className="text-sm font-semibold text-slate-300">No hay mensajes todavia</p>
+        <p className="text-xs text-slate-400 mt-1">Inicia la conversacion en este canal.</p>
       </div>
     );
   }
@@ -91,52 +95,42 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
   }));
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4">
-      <div className="flex flex-col gap-0.5">
-        {rows.map(({ msg, grouped }) => {
-          const authorStatus = statusOf({
-            status: msg.author.status,
-            lastSeenAt: msg.author.lastSeenAt,
-          });
-          return (
+    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 space-y-1">
+      {rows.map(({ msg, grouped }) => {
+        const authorStatus = statusOf({
+          status: msg.author.status,
+          lastSeenAt: msg.author.lastSeenAt,
+        });
+
+        return (
           <div
             key={msg.id}
-            className={`group flex gap-3 rounded-lg px-2 py-1 hover:bg-white/[0.04] ${
-              grouped ? "ml-11" : ""
+            className={`group relative flex gap-3.5 rounded-xl px-3 py-1.5 hover:bg-white/[0.03] transition-colors ${
+              grouped ? "ml-12" : "mt-2"
             }`}
           >
             {grouped ? null : (
-              <Avatar name={msg.author.displayName} color={msg.author.avatarColor} />
+              <Avatar
+                name={msg.author.displayName}
+                color={msg.author.avatarColor}
+                isOnline={authorStatus?.key === "ONLINE"}
+                className="h-9 w-9 text-xs mt-0.5"
+              />
             )}
+
             <div className="min-w-0 flex-1">
               {grouped ? null : (
-                <div className="flex items-center gap-2">
-                  <div className="relative flex items-center gap-1 group/author">
-                    <Link
-                      href={`/directory/${msg.author.id}`}
-                      className="cursor-help font-semibold text-white transition-colors hover:underline"
-                      style={{ color: msg.author.avatarColor }}
-                      title="Abrir ficha"
-                    >
-                      {msg.author.displayName}
-                    </Link>
-                    {msg.author.discord ? (
-                      <div className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden whitespace-nowrap rounded-lg border border-white/10 bg-[#12151f] px-2.5 py-1.5 text-xs text-white/80 shadow-xl group-hover/author:block">
-                        <span className="font-semibold text-indigo-300">
-                          @{msg.author.discord}
-                        </span>
-                        {" · Discord"}
-                      </div>
-                    ) : null}
-                  </div>
-                  {authorStatus ? (
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${authorStatus.dot}`}
-                      title={authorStatus.label}
-                    />
-                  ) : null}
-                  <RoleBadge role={msg.author.role} />
-                  <span className="text-[11px] text-white/30">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <Link
+                    href={`/directory`}
+                    className="font-bold text-sm text-white hover:text-rose-400 transition-colors"
+                  >
+                    {msg.author.displayName}
+                  </Link>
+
+                  <RoleBadge role={msg.author.role} showDot={false} className="py-0 px-2 text-[10px]" />
+
+                  <span className="text-[11px] font-medium text-slate-400">
                     {new Date(msg.createdAt).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -144,35 +138,62 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
                   </span>
                 </div>
               )}
-              <p className="whitespace-pre-wrap break-words text-sm text-white/80">
+
+              <p className="whitespace-pre-wrap break-words text-sm text-slate-200 leading-relaxed font-normal">
                 <Mentioned text={msg.content} />
                 {msg.edited ? (
-                  <span className="ml-1 text-[11px] text-white/30">(editado)</span>
+                  <span className="ml-1.5 text-[10px] text-slate-400 font-medium">(editado)</span>
                 ) : null}
               </p>
 
+              {/* Reaction Badges */}
               {msg.reactions.length > 0 ? (
-                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {msg.reactions.map((r) => (
                     <button
                       key={r.emoji}
                       onClick={() => react(msg.id, r.emoji)}
                       title={r.users.join(", ")}
-                      className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
+                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all active:scale-95 cursor-pointer ${
                         r.mine
-                          ? "border-indigo-400/40 bg-indigo-500/20 text-indigo-200"
-                          : "border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/10"
+                          ? "border-rose-500/40 bg-rose-500/20 text-rose-200 shadow-sm"
+                          : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.08]"
                       }`}
                     >
+                      <IconCheck className="h-3 w-3 text-rose-400" />
                       <span>{r.emoji}</span>
-                      <span>{r.count}</span>
+                      <span className="text-[11px]">{r.count}</span>
                     </button>
                   ))}
                 </div>
               ) : null}
             </div>
 
-            <div className="flex shrink-0 flex-col items-end gap-1 self-center">
+            {/* Floating Action Toolbar on Hover */}
+            <div className="absolute right-3 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#0d121c]/90 backdrop-blur-md border border-white/[0.08] rounded-lg p-1 shadow-lg z-10">
+              <div className="relative">
+                <button
+                  onClick={() => setPalette(palette === msg.id ? null : msg.id)}
+                  className="rounded p-1 text-slate-400 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
+                  title="Anadir reaccion"
+                >
+                  <IconPlus className="h-4 w-4" />
+                </button>
+                {palette === msg.id ? (
+                  <div className="absolute bottom-full right-0 z-30 mb-2 flex gap-1 rounded-2xl border border-white/[0.12] bg-[#0d121c] p-2 shadow-2xl backdrop-blur-xl">
+                    {QUICK_REACTIONS.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => react(msg.id, tag)}
+                        className="rounded-lg px-2 py-1 text-xs font-bold hover:bg-white/[0.08] hover:text-rose-300 transition-all cursor-pointer"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
               {msg.canDelete ? (
                 <button
                   onClick={() => {
@@ -183,40 +204,16 @@ export function MessageList({ messages }: { messages: MessageDTO[] }) {
                     });
                   }}
                   disabled={deleting === msg.id}
-                  className="rounded p-1.5 text-white/30 opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
+                  className="rounded p-1 text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors cursor-pointer"
                   title="Eliminar mensaje"
                 >
                   <IconTrash className="h-4 w-4" />
                 </button>
               ) : null}
-
-              <div className="relative">
-                <button
-                  onClick={() => setPalette(palette === msg.id ? null : msg.id)}
-                  className="rounded p-1 text-white/30 opacity-0 transition-opacity hover:bg-white/10 hover:text-white group-hover:opacity-100"
-                  title="Reaccionar"
-                >
-                  <IconPlus className="h-4 w-4" />
-                </button>
-                {palette === msg.id ? (
-                  <div className="absolute bottom-full right-0 z-20 mb-1 flex gap-1 rounded-full border border-white/10 bg-[#12151f] p-1.5 shadow-xl">
-                    {QUICK_REACTIONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => react(msg.id, emoji)}
-                        className="rounded-full p-1 text-lg transition-transform hover:scale-125"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
             </div>
           </div>
-          );
-        })}
-      </div>
+        );
+      })}
       <div ref={bottomRef} />
     </div>
   );
