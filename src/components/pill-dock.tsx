@@ -36,16 +36,19 @@ function TypewriterText({ text, active }: { text: string; active: boolean }) {
 
     setDisplayed("");
     let i = 0;
-    const speed = 28; // ms per char for energetic responsive typing
-    const interval = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(interval);
-      }
-    }, speed);
+    const speed = 75; // Slower, elegant, clearly visible typewriter animation
+    const timeout = setTimeout(() => {
+      const interval = setInterval(() => {
+        i++;
+        setDisplayed(text.slice(0, i));
+        if (i >= text.length) {
+          clearInterval(interval);
+        }
+      }, speed);
+      return () => clearInterval(interval);
+    }, 60);
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timeout);
   }, [active, text]);
 
   if (!active) return null;
