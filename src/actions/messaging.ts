@@ -213,76 +213,117 @@ export async function deleteMessage(messageId: string) {
 }
 
 export async function createAnnouncement(formData: FormData) {
-  await requireRole("FOUNDER", "ADMIN");
-  const user = await getCurrentUserOrThrow();
-  const title = String(formData.get("title") || "").trim();
-  const content = String(formData.get("content") || "").trim();
-  const priority = String(formData.get("priority") || "normal");
-  const publishAtRaw = String(formData.get("publishAt") || "");
-  const requiresRead = formData.get("requiresRead") === "on";
-  if (!title || !content) return;
+  try {
+    await requireRole("FOUNDER", "ADMIN");
+    const user = await getCurrentUserOrThrow();
+    const title = String(formData.get("title") || "").trim();
+    const content = String(formData.get("content") || "").trim();
+    const priority = String(formData.get("priority") || "normal");
+    const publishAtRaw = String(formData.get("publishAt") || "");
+    const requiresReadVal = formData.get("requiresRead");
+    const requiresRead = requiresReadVal === "true" || requiresReadVal === "on" || requiresReadVal === "1";
 
-  const publishAt = publishAtRaw ? new Date(publishAtRaw) : null;
-  const publishesNow = !publishAt || publishAt.getTime() <= Date.now();
-
-  const announcement = await prisma.announcement.create({
-    data: {
-      title,
-      content,
-      priority,
-      authorId: user.id,
-      publishAt,
-      requiresRead,
-    },
-  });
-
-  if (publishesNow) {
-    const staff = await prisma.user.findMany({ where: { active: true } });
-    for (const s of staff) {
-      await prisma.notification.create({
-        data: {
-          userId: s.id,
-          type: "ANNOUNCEMENT",
-          title: "Nuevo anuncio",
-          body: title,
-          href: "/announcements",
-        },
-      });
+    if (!title || !content) {
+      return { error: "El título y el contenido son obligatorios." };
     }
-  }
 
-  await audit({
-    userId: user.id,
-    action: "ANNOUNCEMENT_CREATE",
-    targetType: "Announcement",
-    targetId: announcement.id,
-    details: `${title}${publishAt ? ` (programado ${publishAt.toISOString()})` : ""}`,
-  });
-  revalidatePath("/announcements");
+    const publishAt = publishAtRaw ? new Date(publishAtRaw) : null;
+    const publishesNow = !publishAt || publishAt.getTime() <= Date.now();
+
+    const announcement = await prisma.announcement.create({
+      data: {
+        title,
+        content,
+        priority,
+        authorId: user.id,
+        publishAt,
+        requiresRead,
+      },
+    });
+
+    if (publishesNow) {
+      const staff = await prisma.user.findMany({ where: { active: true } });
+      for (const s of staff) {
+        await prisma.notification.create({
+          data: {
+            userId: s.id,
+            type: "ANNOUNCEMENT",
+            title: "Nuevo anuncio",
+            body: title,
+            href: "/announcements",
+          },
+        });
+      }
+    }
+
+    await audit({
+      userId: user.id,
+      action: "ANNOUNCEMENT_CREATE",
+      targetType: "Announcement",
+      targetId: announcement.id,
+      details: `${title}${publishAt ? ` (programado ${publishAt.toISOString()})` : ""}`,
+    });
+
+    revalidatePath("/announcements");
+    return { success: true, id: announcement.id };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Error al publicar el comunicado." };
+  }
 }
 
 export async function confirmAnnouncementRead(announcementId: string) {
-  const user = await getCurrentUserOrThrow();
-  await prisma.announcementRead.upsert({
-    where: {
-      announcementId_userId: { announcementId, userId: user.id },
-    },
-    create: { announcementId, userId: user.id },
-    update: {},
-  });
-  revalidatePath("/announcements");
+  try {
+    const user = await getCurrentUserOrThrow();
+    const existing = await prisma.announcement.findUnique({
+      where: { id: announcementId },
+    });
+    if (!existing) {
+      revalidatePath("/announcements");
+      return { success: true };
+    }
+
+    await prisma.announcementRead.upsert({
+      where: {
+        announcementId_userId: { announcementId, userId: user.id },
+      },
+      create: { announcementId, userId: user.id },
+      update: {},
+    });
+    revalidatePath("/announcements");
+    return { success: true };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Error al confirmar la lectura." };
+  }
 }
 
 export async function deleteAnnouncement(announcementId: string) {
-  await requireRole("FOUNDER", "ADMIN");
-  await prisma.announcement.delete({ where: { id: announcementId } });
-  await audit({
-    userId: (await getCurrentUserOrThrow()).id,
-    action: "ANNOUNCEMENT_DELETE",
-    targetType: "Announcement",
-    targetId: announcementId,
-  });
-  revalidatePath("/announcements");
+  try {
+    await requireRole("FOUNDER", "ADMIN");
+    const user = await getCurrentUserOrThrow();
+    const existing = await prisma.announcement.findUnique({
+      where: { id: announcementId },
+    });
+    if (!existing) {
+      revalidatePath("/announcements");
+      return { success: true };
+    }
+
+    await prisma.announcementRead.deleteMany({
+      where: { announcementId },
+    });
+    await prisma.announcement.delete({ where: { id: announcementId } });
+
+    await audit({
+      userId: user.id,
+      action: "ANNOUNCEMENT_DELETE",
+      targetType: "Announcement",
+      targetId: announcementId,
+    });
+    revalidatePath("/announcements");
+    return { success: true };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Error al eliminar el comunicado." };
+  }
 }
 
 export async function markNotificationsRead() {
