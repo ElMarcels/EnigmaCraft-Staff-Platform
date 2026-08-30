@@ -111,11 +111,13 @@ export function DriveView({
   folderId,
   items,
   breadcrumb,
+  totalUsedBytes = 0,
   canManage,
 }: {
   folderId: string | null;
   items: DriveItemDTO[];
   breadcrumb: { id: string; name: string }[];
+  totalUsedBytes?: number;
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -338,11 +340,18 @@ export function DriveView({
 
             <span className="text-slate-600 hidden sm:inline">|</span>
 
-            {/* Storage Usage Bar */}
+            {/* Storage Usage Bar (Dynamic Real Value) */}
             <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-1 text-[11px] text-slate-400">
-              <span>Espacio: <strong className="text-slate-200">18.0 MB</strong> / 10 GB</span>
+              <span>
+                Espacio: <strong className="text-slate-200">{fmtBytes(totalUsedBytes)}</strong> / 10 GB
+              </span>
               <div className="w-16 h-1.5 rounded-full bg-white/[0.1] overflow-hidden">
-                <div className="h-full w-[8%] bg-gradient-to-r from-[var(--ruby-light)] to-[var(--ruby-primary)]" />
+                <div
+                  className="h-full bg-gradient-to-r from-[var(--ruby-light)] to-[var(--ruby-primary)] transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, Math.max(0.5, (totalUsedBytes / (10 * 1024 * 1024 * 1024)) * 100))}%`,
+                  }}
+                />
               </div>
             </div>
           </div>

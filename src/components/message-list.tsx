@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { deleteMessage, toggleReaction } from "@/actions/messaging";
 import { Avatar, RoleBadge } from "@/components/role-badge";
+import { UserProfilePopover, PopoverUserData } from "@/components/user-profile-popover";
 import { IconTrash, IconPlus, IconChat, IconFile, IconDownload, IconClose } from "@/components/icons";
 import { isOnline } from "@/lib/role-meta";
 import { sounds } from "@/lib/sound-effects";
@@ -39,19 +40,128 @@ export type MessageDTO = {
 
 const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "💎", "⚔️", "✅", "🚀"];
 
-function Mentioned({ text }: { text: string }) {
-  const parts = text.split(/(@[a-zA-Z0-9_]{2,32})/g);
+// Rich Formatter: Parses @mentions, #channels, #folders, Minecraft color codes (&a, &c...) and markdown
+function FormattedMessageText({
+  text,
+  onUserClick,
+}: {
+  text: string;
+  onUserClick?: (username: string) => void;
+}) {
+  // 1. Process Minecraft Color Codes (&a, &c, &b, &e, &d, &6, &9, &r)
+  const renderMinecraftColored = (segment: string, segKey: string | number) => {
+    const mcRegex = /(&[0-9a-fk-orA-FK-OR])([^&]+)/g;
+    const parts = [];
+    let lastIdx = 0;
+    let match;
+
+    while ((match = mcRegex.exec(segment)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(segment.slice(lastIdx, match.index));
+      }
+      const code = match[1].toLowerCase();
+      const str = match[2];
+
+      let colorClass = "text-slate-200";
+      if (code === "&a") colorClass = "text-emerald-400 font-semibold";
+      else if (code === "&c") colorClass = "text-rose-400 font-semibold";
+      else if (code === "&b") colorClass = "text-cyan-400 font-semibold";
+      else if (code === "&e") colorClass = "text-yellow-400 font-semibold";
+      else if (code === "&6") colorClass = "text-amber-400 font-semibold";
+      else if (code === "&d") colorClass = "text-pink-400 font-semibold";
+      else if (code === "&9") colorClass = "text-blue-400 font-semibold";
+
+      parts.push(
+        <span key={`${segKey}-mc-${match.index}`} className={colorClass}>
+          {str}
+        </span>
+      );
+      lastIdx = match.index + match[0].length;
+    }
+
+    if (lastIdx < segment.length) {
+      parts.push(segment.slice(lastIdx));
+    }
+
+    return parts.length > 0 ? parts : segment;
+  };
+
+  // 2. Tokenize by mentions (@...), channels/folders (#...), highlight (==...==), bold (**...**), code (`...`)
+  const tokenRegex = /(@[a-zA-Z0-9_]{2,32}|#[a-zA-Z0-9_]{2,32}|==[^=]+==|\*\*[^*]+\*\*|`[^`]+`)/g;
+  const rawParts = text.split(tokenRegex);
+
   return (
     <>
-      {parts.map((p, i) =>
-        i === 0 || !p.startsWith("@") ? (
-          p
-        ) : (
-          <span key={i} className="rounded-md theme-badge px-1.5 py-0.5 font-semibold">
-            {p}
-          </span>
-        )
-      )}
+      {rawParts.map((part, i) => {
+        if (!part) return null;
+
+        // Mention @user or @group
+        if (part.startsWith("@")) {
+          const isGroup = ["@staff", "@todos", "@admin", "@mod", "@builder"].includes(part.toLowerCase());
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onUserClick && onUserClick(part.slice(1))}
+              className={`rounded-md px-1.5 py-0.5 font-bold text-xs inline-flex items-center gap-1 transition-transform hover:scale-105 cursor-pointer ${
+                isGroup
+                  ? "theme-badge shadow-sm"
+                  : "bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30"
+              }`}
+            >
+              {part}
+            </button>
+          );
+        }
+
+        // Channel or Drive Folder tag #tag
+        if (part.startsWith("#")) {
+          const tagName = part.slice(1).toLowerCase();
+          const isDriveFolder = ["plugins", "schematics", "configs", "mapas", "drive", "files"].includes(tagName);
+          const linkHref = isDriveFolder ? `/files` : `/chat/${tagName}`;
+
+          return (
+            <Link
+              key={i}
+              href={linkHref}
+              className="rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 px-1.5 py-0.5 font-bold text-xs inline-flex items-center gap-1 hover:bg-cyan-500/25 hover:text-cyan-200 transition-colors"
+            >
+              <span>{isDriveFolder ? "📁" : "#"}</span>
+              <span>{part.slice(1)}</span>
+            </Link>
+          );
+        }
+
+        // Highlight ==text==
+        if (part.startsWith("==") && part.endsWith("==")) {
+          return (
+            <mark key={i} className="rounded bg-yellow-400/20 text-yellow-200 px-1.5 py-0.5 border border-yellow-400/30 font-medium">
+              {part.slice(2, -2)}
+            </mark>
+          );
+        }
+
+        // Bold **text**
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={i} className="font-bold text-white">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+
+        // Inline Code `code`
+        if (part.startsWith("`") && part.endsWith("`")) {
+          return (
+            <code key={i} className="rounded bg-black/50 border border-white/[0.1] px-1.5 py-0.5 font-mono text-xs text-cyan-300">
+              {part.slice(1, -1)}
+            </code>
+          );
+        }
+
+        // Regular text (with potential Minecraft color codes)
+        return <span key={i}>{renderMinecraftColored(part, i)}</span>;
+      })}
     </>
   );
 }
@@ -59,9 +169,11 @@ function Mentioned({ text }: { text: string }) {
 function RenderMessageContent({
   content,
   onImageClick,
+  onUserClick,
 }: {
   content: string;
   onImageClick: (url: string) => void;
+  onUserClick: (username: string) => void;
 }) {
   const lines = content.split("\n");
   const textLines: string[] = [];
@@ -87,7 +199,7 @@ function RenderMessageContent({
     <div className="space-y-2">
       {cleanText ? (
         <p className="whitespace-pre-wrap break-words text-sm text-slate-200 leading-relaxed font-normal">
-          <Mentioned text={cleanText} />
+          <FormattedMessageText text={cleanText} onUserClick={onUserClick} />
         </p>
       ) : null}
 
@@ -156,6 +268,7 @@ export function MessageList({
   const [palette, setPalette] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
+  const [selectedUserPopover, setSelectedUserPopover] = useState<PopoverUserData | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -165,6 +278,28 @@ export function MessageList({
     sounds.playReaction();
     toggleReaction(messageId, emoji).then(() => router.refresh());
     setPalette(null);
+  }
+
+  function handleUserClickByName(usernameOrDisplay: string) {
+    const targetMsg = messages.find(
+      (m) =>
+        m.author.displayName.toLowerCase() === usernameOrDisplay.toLowerCase() ||
+        m.author.id === usernameOrDisplay
+    );
+    if (targetMsg) {
+      sounds.playPop();
+      setSelectedUserPopover({
+        id: targetMsg.author.id,
+        displayName: targetMsg.author.displayName,
+        username: targetMsg.author.displayName.toLowerCase().replace(/\s+/g, "_"),
+        avatarColor: targetMsg.author.avatarColor,
+        role: targetMsg.author.role,
+        discord: targetMsg.author.discord,
+        minecraftNick: targetMsg.author.minecraftNick,
+        status: targetMsg.author.status,
+        isOnline: isOnline(targetMsg.author.lastSeenAt),
+      });
+    }
   }
 
   if (messages.length === 0) {
@@ -183,6 +318,13 @@ export function MessageList({
 
   return (
     <div className="flex-1 space-y-4 overflow-y-auto p-4 md:p-6 select-text">
+      {/* User Profile Popover Modal */}
+      <UserProfilePopover
+        user={selectedUserPopover}
+        currentUserId={currentUserId}
+        onClose={() => setSelectedUserPopover(null)}
+      />
+
       {/* Lightbox Modal */}
       {activeLightboxImg && (
         <div
@@ -221,6 +363,21 @@ export function MessageList({
 
         const isUserOnline = isOnline(msg.author.lastSeenAt);
 
+        const openAuthorProfile = () => {
+          sounds.playPop();
+          setSelectedUserPopover({
+            id: msg.author.id,
+            displayName: msg.author.displayName,
+            username: msg.author.displayName.toLowerCase().replace(/\s+/g, "_"),
+            avatarColor: msg.author.avatarColor,
+            role: msg.author.role,
+            discord: msg.author.discord,
+            minecraftNick: msg.author.minecraftNick,
+            status: msg.author.status,
+            isOnline: isUserOnline,
+          });
+        };
+
         return (
           <div
             key={msg.id}
@@ -230,13 +387,20 @@ export function MessageList({
           >
             {/* Avatar / Placeholder */}
             {!isChained ? (
-              <Avatar
-                name={msg.author.displayName}
-                color={msg.author.avatarColor}
-                minecraftNick={msg.author.minecraftNick}
-                isOnline={isUserOnline}
-                className="h-9 w-9 text-xs shrink-0"
-              />
+              <button
+                type="button"
+                onClick={openAuthorProfile}
+                className="shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                title={`Ver perfil de ${msg.author.displayName}`}
+              >
+                <Avatar
+                  name={msg.author.displayName}
+                  color={msg.author.avatarColor}
+                  minecraftNick={msg.author.minecraftNick}
+                  isOnline={isUserOnline}
+                  className="h-9 w-9 text-xs"
+                />
+              </button>
             ) : (
               <div className="w-9 shrink-0 select-none text-right text-[10px] text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
                 {new Date(msg.createdAt).toLocaleTimeString([], {
@@ -250,12 +414,13 @@ export function MessageList({
             <div className="min-w-0 flex-1">
               {!isChained && (
                 <div className="flex items-center gap-2 mb-1">
-                  <Link
-                    href={`/directory?u=${msg.author.id}`}
-                    className="font-bold text-sm text-white hover:text-[var(--ruby-light)] transition-colors"
+                  <button
+                    type="button"
+                    onClick={openAuthorProfile}
+                    className="font-bold text-sm text-white hover:text-[var(--ruby-light)] transition-colors cursor-pointer"
                   >
                     {msg.author.displayName}
-                  </Link>
+                  </button>
 
                   <RoleBadge role={msg.author.role} showDot={false} className="py-0 px-2 text-[10px]" />
 
@@ -271,6 +436,7 @@ export function MessageList({
               <RenderMessageContent
                 content={msg.content}
                 onImageClick={(url) => setActiveLightboxImg(url)}
+                onUserClick={handleUserClickByName}
               />
 
               {msg.edited ? (

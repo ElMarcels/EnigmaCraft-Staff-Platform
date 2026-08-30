@@ -143,7 +143,21 @@ export default async function FilesPage({
       }));
     }
   } catch {
-    // Graceful fallback
+    // Fallback
+  }
+
+  let totalUsedBytes = items.reduce((acc, it) => acc + (it.size || 0), 0);
+
+  try {
+    const sumAgg = await prisma.fileNode.aggregate({
+      _sum: { size: true },
+      where: { isFolder: false },
+    });
+    if (sumAgg._sum.size !== null && sumAgg._sum.size !== undefined) {
+      totalUsedBytes = sumAgg._sum.size;
+    }
+  } catch {
+    // Fallback
   }
 
   const canManage = !!user;
@@ -154,6 +168,7 @@ export default async function FilesPage({
         folderId={rootId}
         items={items}
         breadcrumb={path}
+        totalUsedBytes={totalUsedBytes}
         canManage={canManage}
       />
     </div>

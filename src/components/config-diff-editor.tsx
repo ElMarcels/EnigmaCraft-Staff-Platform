@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { sounds } from "@/lib/sound-effects";
@@ -7,6 +9,7 @@ import {
   IconCheck,
   IconAlertTriangle,
   IconFile,
+  IconSearch,
 } from "@/components/icons";
 
 export function ConfigDiffEditor({
@@ -24,12 +27,24 @@ export function ConfigDiffEditor({
   onClose: () => void;
   onSave?: (fileName: string, newContent: string) => void;
 }) {
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  const isSheet = ["xlsx", "xls", "csv", "tsv"].includes(ext);
+  const isDoc = ["docx", "doc", "md", "txt", "pdf"].includes(ext);
+
+  const defaultTab: "editor" | "diff" | "preview" = isSheet || isDoc ? "preview" : "editor";
+  const [activeTab, setActiveTab] = useState<"editor" | "diff" | "preview">(defaultTab);
   const [content, setContent] = useState(initialContent);
-  const [activeTab, setActiveTab] = useState<"editor" | "diff">("editor");
+  const [sheetSearch, setSheetSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setContent(initialContent);
+    const newExt = fileName.split(".").pop()?.toLowerCase() || "";
+    if (["xlsx", "xls", "csv", "tsv", "docx", "doc", "md"].includes(newExt)) {
+      setActiveTab("preview");
+    } else {
+      setActiveTab("editor");
+    }
   }, [initialContent, fileName]);
 
   if (!isOpen) return null;
@@ -65,6 +80,16 @@ export function ConfigDiffEditor({
   // Calculate simple diff lines
   const originalLines = initialContent.split("\n");
   const modifiedLines = content.split("\n");
+
+  // Spreadsheet CSV parsing
+  const csvRows = content.split("\n").filter(Boolean).map((row) =>
+    row.includes(",") ? row.split(",") : row.split(";")
+  );
+  const headers = csvRows[0] || ["Columna 1", "Columna 2", "Columna 3"];
+  const dataRows = csvRows.slice(1);
+  const filteredRows = dataRows.filter((r) =>
+    r.some((c) => c.toLowerCase().includes(sheetSearch.toLowerCase()))
+  );
 
   async function handleSave() {
     if (!validation.isValid) {
@@ -106,11 +131,15 @@ export function ConfigDiffEditor({
                   {fileName}
                 </h2>
                 <span className="rounded-md theme-badge px-2 py-0.5 text-[10px] font-bold uppercase">
-                  Editor de Configs
+                  {isSheet ? "Hoja de Cálculo" : isDoc ? "Documento" : "Configurador"}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Edición directa en la nube con validador de sintaxis en tiempo real.
+                {isSheet
+                  ? "Visualizador y editor de tablas de cálculo y datos."
+                  : isDoc
+                  ? "Lector de documentos de texto, normativas y guías."
+                  : "Edición directa en la nube con validador de sintaxis en tiempo real."}
               </p>
             </div>
           </div>
@@ -118,6 +147,22 @@ export function ConfigDiffEditor({
           <div className="flex items-center gap-2">
             {/* Tab switch */}
             <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+              {(isSheet || isDoc) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playPop();
+                    setActiveTab("preview");
+                  }}
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === "preview"
+                      ? "theme-badge shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {isSheet ? "Vista Tabla" : "Vista Lectura"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -130,7 +175,7 @@ export function ConfigDiffEditor({
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                Editor
+                Editor Código
               </button>
               <button
                 type="button"
@@ -168,9 +213,70 @@ export function ConfigDiffEditor({
           </div>
         )}
 
-        {/* Editor Body */}
+        {/* Modal Content */}
         <div className="flex-1 overflow-hidden flex flex-col bg-[#05070c]">
-          {activeTab === "editor" ? (
+          {activeTab === "preview" && isSheet ? (
+            /* Spreadsheet / Excel Table Preview */
+            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="relative max-w-sm flex-1">
+                  <IconSearch className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={sheetSearch}
+                    onChange={(e) => setSheetSearch(e.target.value)}
+                    placeholder="Filtrar celdas de la tabla..."
+                    className="input !py-1.5 !pl-9 text-xs"
+                  />
+                </div>
+                <div className="text-xs text-slate-400 font-mono">
+                  {filteredRows.length} filas encontradas
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-auto rounded-2xl border border-white/[0.08] bg-black/40">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-[#0d121c] border-b border-white/[0.08] text-slate-300 font-bold uppercase tracking-wider backdrop-blur-md">
+                    <tr>
+                      <th className="py-2.5 px-4 w-12 border-r border-white/[0.06] text-slate-500 text-center">#</th>
+                      {headers.map((h, i) => (
+                        <th key={i} className="py-2.5 px-4 border-r border-white/[0.06] last:border-r-0">
+                          {h.trim()}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04] text-slate-300 font-mono text-[11px]">
+                    {filteredRows.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
+                        <td className="py-2 px-3 text-center text-slate-500 border-r border-white/[0.06] select-none">
+                          {idx + 1}
+                        </td>
+                        {row.map((cell, cIdx) => (
+                          <td key={cIdx} className="py-2 px-4 border-r border-white/[0.06] last:border-r-0 truncate max-w-xs">
+                            {cell.trim()}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : activeTab === "preview" && isDoc ? (
+            /* Document / Word Reader Preview */
+            <div className="flex-1 overflow-y-auto p-8 max-w-3xl mx-auto space-y-4 text-slate-200 text-sm leading-relaxed">
+              <div className="border-b border-white/[0.08] pb-4 mb-6">
+                <h1 className="text-2xl font-extrabold text-white tracking-tight">{fileName}</h1>
+                <p className="text-xs text-slate-400 mt-1">Documento de Staff de EnigmaCraft Network</p>
+              </div>
+
+              <div className="space-y-4 font-sans whitespace-pre-wrap">
+                {content || "No hay texto en este documento."}
+              </div>
+            </div>
+          ) : activeTab === "editor" ? (
+            /* Code Editor View */
             <div className="flex-1 relative flex">
               {/* Line Numbers */}
               <div className="w-12 py-3 bg-black/40 border-r border-white/[0.06] text-slate-600 font-mono text-xs select-none text-right pr-3 space-y-0.5 overflow-hidden">
@@ -232,7 +338,7 @@ export function ConfigDiffEditor({
               }}
               className="btn-secondary text-xs"
             >
-              Cancelar
+              Cerrar
             </button>
             <button
               type="button"
@@ -241,7 +347,7 @@ export function ConfigDiffEditor({
               className="btn-primary text-xs font-semibold px-5 flex items-center gap-2"
             >
               <IconCheck className="h-4 w-4" />
-              {saving ? "Guardando..." : "Guardar y Desplegar"}
+              {saving ? "Guardando..." : "Guardar en la Nube"}
             </button>
           </div>
         </div>

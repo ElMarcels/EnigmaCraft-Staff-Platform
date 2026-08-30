@@ -10,11 +10,13 @@ export function ChatChannelView({
   channel,
   messages,
   userDisplayName,
+  currentUserId,
   members,
 }: {
   channel: { id: string; name: string; type: string; description: string | null; categoryName: string };
   messages: MessageDTO[];
   userDisplayName: string;
+  currentUserId?: string;
   members?: ChannelMemberDTO[];
 }) {
   const [showMembers, setShowMembers] = useState(true);
@@ -58,11 +60,13 @@ export function ChatChannelView({
 
         {/* Message Feed */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <MessageList messages={messages} />
+          <MessageList messages={messages} currentUserId={currentUserId} />
         </div>
 
         {/* Message Composer */}
-        {channel.type === "VOICE" ? null : <MessageComposer channelId={channel.id} />}
+        {channel.type === "VOICE" ? null : (
+          <MessageComposer channelId={channel.id} members={members} />
+        )}
       </div>
 
       {/* Right Members Drawer */}

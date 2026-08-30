@@ -118,7 +118,7 @@ export async function syncLocalDirectoryAction(
   const user = await getCurrentUserOrThrow();
   const cleanFolderName = sanitize(folderName || "Carpeta Sincronizada");
 
-  // Create or find root synced folder
+  // Create root synced folder
   let rootFolder = await prisma.fileNode.findFirst({
     where: {
       name: cleanFolderName,
@@ -138,13 +138,65 @@ export async function syncLocalDirectoryAction(
     });
   }
 
-  // Create files inside this folder
+  // Helper to ensure nested subfolder path exists
+  async function ensureFolderPath(
+    pathParts: string[],
+    parentFolderId: string
+  ): Promise<string> {
+    let currentParentId = parentFolderId;
+
+    for (const folderName of pathParts) {
+      const cleanSubName = sanitize(folderName);
+      let subFolder = await prisma.fileNode.findFirst({
+        where: {
+          name: cleanSubName,
+          isFolder: true,
+          parentId: currentParentId,
+        },
+      });
+
+      if (!subFolder) {
+        subFolder = await prisma.fileNode.create({
+          data: {
+            name: cleanSubName,
+            isFolder: true,
+            parentId: currentParentId,
+            ownerId: user.id,
+          },
+        });
+      }
+
+      currentParentId = subFolder.id;
+    }
+
+    return currentParentId;
+  }
+
+  // Create files and nested subfolders
   for (const f of files) {
-    const cleanName = sanitize(f.name);
+    const rawPath = f.relativePath.replace(/\\/g, "/");
+    const segments = rawPath.split("/").filter(Boolean);
+
+    // If relative path begins with the root folder name, shift it
+    if (segments.length > 1 && segments[0].toLowerCase() === cleanFolderName.toLowerCase()) {
+      segments.shift();
+    }
+
+    const fileName = segments.pop() || f.name;
+    const subfolderSegments = segments;
+
+    // Resolve exact parent folder (root or nested subfolder)
+    const targetParentId =
+      subfolderSegments.length > 0
+        ? await ensureFolderPath(subfolderSegments, rootFolder.id)
+        : rootFolder.id;
+
+    const cleanName = sanitize(fileName);
+
     const existingFile = await prisma.fileNode.findFirst({
       where: {
         name: cleanName,
-        parentId: rootFolder.id,
+        parentId: targetParentId,
         isFolder: false,
       },
     });
@@ -160,7 +212,7 @@ export async function syncLocalDirectoryAction(
           name: cleanName,
           isFolder: false,
           size: Math.floor(f.size || 0),
-          parentId: rootFolder.id,
+          parentId: targetParentId,
           ownerId: user.id,
         },
       });
@@ -172,7 +224,7 @@ export async function syncLocalDirectoryAction(
     action: "FOLDER_SYNC",
     targetType: "FileNode",
     targetId: rootFolder.id,
-    details: `${cleanFolderName} (${files.length} archivos)`,
+    details: `${cleanFolderName} (${files.length} archivos con estructura de subcarpetas)`,
   });
 
   revalidatePath("/files");

@@ -147,6 +147,7 @@ export default async function ChannelPage({
         reactions: reactionsById(m.id),
       }))}
       userDisplayName={user?.displayName || "Marcel"}
+      currentUserId={user?.id}
       members={members}
     />
   );
