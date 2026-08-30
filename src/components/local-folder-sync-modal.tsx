@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { sounds } from "@/lib/sound-effects";
 import { syncLocalDirectoryAction } from "@/actions/files";
+import { extractRealFileContent } from "@/lib/file-extractor";
 import {
   IconFolder,
   IconCheck,
@@ -152,19 +153,16 @@ export function LocalFolderSyncModal({
     sounds.playPop();
 
     try {
-      const TEXT_EXTS = [
-        "yml", "yaml", "json", "properties", "txt", "md", "schem",
-        "toml", "xml", "csv", "tsv", "ini", "conf", "log"
-      ];
-
-      // Read text content only for text-based configs to keep payload ultra-fast and lightweight
+      // Extract real file content (including docx, xlsx, yml, json, properties, java, etc.)
       const dtos = await Promise.all(
         localFiles.map(async (f) => {
           let content: string | undefined = undefined;
-          const ext = f.name.split(".").pop()?.toLowerCase() || "";
-          if (f.fileObject && TEXT_EXTS.includes(ext) && f.size < 250 * 1024) {
+          if (f.fileObject && f.size < 10 * 1024 * 1024) {
             try {
-              content = await f.fileObject.text();
+              const extracted = await extractRealFileContent(f.fileObject, f.name);
+              if (extracted) {
+                content = extracted;
+              }
             } catch {}
           }
           return {

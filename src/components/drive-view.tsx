@@ -15,6 +15,7 @@ import {
   getFileContentAction,
   syncLocalDirectoryAction,
 } from "@/actions/files";
+import { extractRealFileContent } from "@/lib/file-extractor";
 import {
   IconFolder,
   IconFile,
@@ -253,20 +254,15 @@ function decodeBase64Utf8(base64Str: string): string {
 
     try {
       const all = Array.from(files);
-      const TEXT_EXTS = [
-        "yml", "yaml", "json", "properties", "txt", "md", "schem",
-        "toml", "xml", "csv", "tsv", "ini", "conf", "log"
-      ];
-
       const dtos = await Promise.all(
         all.map(async (file) => {
           let content: string | undefined = undefined;
-          const ext = file.name.split(".").pop()?.toLowerCase() || "";
-          if (TEXT_EXTS.includes(ext) && file.size < 250 * 1024) {
-            try {
-              content = await file.text();
-            } catch {}
-          }
+          try {
+            const extracted = await extractRealFileContent(file, file.name);
+            if (extracted) {
+              content = extracted;
+            }
+          } catch {}
           return {
             name: file.name,
             relativePath: file.name,
