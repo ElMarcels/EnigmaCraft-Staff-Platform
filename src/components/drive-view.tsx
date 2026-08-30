@@ -134,6 +134,8 @@ export function DriveView({
   const [editorModalOpen, setEditorModalOpen] = useState(false);
   const [editorFileName, setEditorFileName] = useState("config.yml");
   const [editorContent, setEditorContent] = useState("");
+  const [activeDriveTab, setActiveDriveTab] = useState<"explorer" | "gdrive">("explorer");
+  const [linkedGDriveFolderId] = useState<string>("1mwDvaqMYGNwrl1Or5npDvGV-XQnCgXrx");
 
 function decodeBase64Utf8(base64Str: string): string {
   try {
@@ -503,6 +505,80 @@ function decodeBase64Utf8(base64Str: string): string {
         </div>
       </div>
 
+      {/* Primary Storage Mode Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-1.5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              sounds.playPop();
+              setActiveDriveTab("explorer");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeDriveTab === "explorer"
+                ? "bg-gradient-to-r from-[var(--ruby-primary)] to-[var(--ruby-secondary)] text-white shadow-lg"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            }`}
+          >
+            <IconFolder className="h-4 w-4" />
+            <span>Explorador EnigmaCraft</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sounds.playPop();
+              setActiveDriveTab("gdrive");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeDriveTab === "gdrive"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            }`}
+          >
+            <svg className="w-4 h-4 text-blue-300" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
+            </svg>
+            <span>Google Drive en Vivo (Directo)</span>
+          </button>
+        </div>
+
+        {activeDriveTab === "gdrive" && (
+          <div className="flex items-center gap-2 pr-2">
+            <button
+              type="button"
+              onClick={() => setCloudModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-slate-200 border border-white/[0.08] transition-all cursor-pointer"
+            >
+              Cambiar Carpeta
+            </button>
+            <a
+              href={`https://drive.google.com/drive/folders/${linkedGDriveFolderId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-xs font-semibold text-blue-200 border border-blue-500/30 transition-all flex items-center gap-1.5"
+            >
+              <span>Abrir en Google Drive</span>
+              <span>↗</span>
+            </a>
+          </div>
+        )}
+      </div>
+
+      {activeDriveTab === "gdrive" ? (
+        /* Embedded Live Google Drive Full Interactive View */
+        <div className="space-y-4">
+          <div className="w-full h-[750px] rounded-2xl overflow-hidden border border-white/[0.1] bg-[#02050a] shadow-2xl relative">
+            <iframe
+              src={`https://drive.google.com/embeddedfolderview?id=${linkedGDriveFolderId}#grid`}
+              className="w-full h-full border-0"
+              title="Google Drive EnigmaCraft"
+              allow="autoplay; encrypted-media; fullscreen"
+            />
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Filter and View Mode Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-card p-3">
         {/* Search */}
@@ -859,6 +935,8 @@ function decodeBase64Utf8(base64Str: string): string {
             })}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
