@@ -135,11 +135,33 @@ export function DriveView({
   const [editorContent, setEditorContent] = useState("");
 
   function loadDefaultTemplate(name: string) {
-    const ext = name.split(".").pop()?.toLowerCase();
-    if (ext === "yml" || ext === "yaml") {
+    const ext = name.split(".").pop()?.toLowerCase() || "";
+    const lower = name.toLowerCase();
+
+    if (ext === "docx" || ext === "doc" || (ext === "txt" && lower.includes("norma"))) {
       setEditorContent(
-        `# Configuración: ${name}\n# EnigmaCraft Network Platform\nversion: "1.21.4"\nenabled: true\nsettings:\n  debug-mode: false\n  cache-ttl-seconds: 3600\n  auto-save: true\n\nmessages:\n  prefix: "&c[EnigmaCraft]&r "\n  success: "&aConfiguración cargada correctamente."\n  error: "&cError al procesar el comando."\n`
+        `# NORMATIVA OFICIAL DE STAFF - ENIGMACRAFT NETWORK\nVersión: 2026.3 | Última Actualización: Agosto 2026\n\n## 1. Principios Fundamentales del Equipo\n1.1. Respeto Absoluto: Todo miembro del Staff debe tratar a los usuarios con cordialidad y profesionalismo.\n1.2. Imparcialidad: Las sanciones se aplican estrictamente según la tabla de infracciones, sin favoritismos.\n1.3. Confidencialidad: Las contraseñas, IPs, registros de auditoría y chats de rango superior son estrictamente confidenciales.\n1.4. Presencia en el Servidor: Cumplir con un mínimo de 10 horas semanales de guardia activa en modalidades principales.\n\n## 2. Protocolo de Sanciones\n- Infracción Leve (Spam, Mayúsculas excesivas): Advertencia verbal -> Mute 15m -> Mute 1h.\n- Infracción Media (Toxicidad, Faltas de respeto): Mute 6h -> TempBan 24h.\n- Infracción Grave (Uso de Hacks / Clientes ilegales, Duping): Ban 30d con grabación obligatoria en #pruebas-sanciones.\n- Infracción Crítica (Ataques DDoS, Robo de cuentas, Venta ilegítima): Ban permanente + Blacklist de red.\n\n## 3. Comandos de Asistencia Rápida\n- /staffchat [mensaje] - Canal de comunicación encriptado in-game.\n- /vanish [nick] - Inspección de usuarios sospechosos.\n- /co inspect - Análisis de bloques y cofres (CoreProtect).\n`
       );
+    } else if (ext === "xlsx" || ext === "xls" || ext === "csv" || ext === "tsv") {
+      if (lower.includes("econ")) {
+        setEditorContent(
+          `ID Item,Nombre del Item,Categoria,Precio Compra ($),Precio Venta ($),Multiplicador VIP,Estado Mercado\nECO-01,Diamante en Bruto,Minerales,150.00,120.00,1.25x,Estable\nECO-02,Lingote de Netherite,Minerales,1200.00,950.00,1.50x,Alta Demanda\nECO-03,Vara de Blaze,Monstruos,45.00,30.00,1.10x,Estable\nECO-04,Manzana Dorada Encantada,Tesoros,3500.00,2800.00,1.50x,Limitado\nECO-05,Trigo en Fardo (x64),Agricultura,80.00,65.00,1.20x,Excedente\nECO-06,Spawner de Zombis,Especiales,45000.00,30000.00,1.75x,Exclusivo\n`
+        );
+      } else {
+        setEditorContent(
+          `ID Sancion,Fecha,Jugador,Rango Afectado,Motivo,Tipo Sancion,Duracion,Staff Responsable,Estado\nSANC-001,2026-08-28,xX_GamerPro_Xx,Usuario,Uso de KillAura y Fly en BoxPvP,BAN,30 dias,AlexAdmin,Activa\nSANC-002,2026-08-29,DarkShadow99,VIP+,Spam masivo de enlaces en chat global,MUTE,2 horas,LucasMod,Expirada\nSANC-003,2026-08-29,CreeperKing,Usuario,Aprovechamiento de bug de duplicacion,BAN,Permanente,Marcel,Activa\nSANC-004,2026-08-30,MinerGirl_21,VIP,Toxicidad reiterada hacia moderadores,MUTE,12 horas,ElenaBuilder,Activa\nSANC-005,2026-08-30,GhostPlayer,Usuario,Intento de traspaso de cuenta staff,BAN,Permanente,AlexAdmin,Activa\n`
+        );
+      }
+    } else if (ext === "yml" || ext === "yaml") {
+      if (lower.includes("perm")) {
+        setEditorContent(
+          `# ==========================================================\n#     EnigmaCraft LuckPerms / Permissions Hierarchy\n# ==========================================================\ngroups:\n  default:\n    options:\n      default: true\n      prefix: "&7[Usuario]&r "\n    permissions:\n      - "enigmacraft.player.spawn"\n      - "enigmacraft.player.home"\n      - "enigmacraft.player.tpa"\n\n  helper:\n    options:\n      inheritance:\n        - default\n      prefix: "&a[Helper]&r "\n    permissions:\n      - "enigmacraft.staff.chat"\n      - "enigmacraft.staff.mute"\n      - "enigmacraft.staff.warn"\n\n  moderator:\n    options:\n      inheritance:\n        - helper\n      prefix: "&9[Mod]&r "\n    permissions:\n      - "enigmacraft.staff.kick"\n      - "enigmacraft.staff.tempban"\n      - "enigmacraft.staff.vanish"\n      - "coreprotect.inspect"\n\n  admin:\n    options:\n      inheritance:\n        - moderator\n      prefix: "&c[Admin]&r "\n    permissions:\n      - "enigmacraft.admin.*"\n      - "luckperms.editor"\n`
+        );
+      } else {
+        setEditorContent(
+          `# Configuración: ${name}\n# EnigmaCraft Network Platform\nversion: "1.21.4"\nenabled: true\nsettings:\n  debug-mode: false\n  cache-ttl-seconds: 3600\n  auto-save: true\n\nmessages:\n  prefix: "&8[&cEnigmaCraft&8]&r "\n  success: "&aConfiguración cargada correctamente."\n  error: "&cError al procesar el comando."\n`
+        );
+      }
     } else if (ext === "json") {
       setEditorContent(
         JSON.stringify(
@@ -163,7 +185,7 @@ export function DriveView({
         `# Metadatos del Esquemático de WorldEdit (.schem)\nname: "${name}"\nformat: "Sponge V2 / FastAsyncWorldEdit"\ndimensions:\n  width_x: 64\n  height_y: 48\n  length_z: 64\nblocks_count: 196608\npaste_offset: [0, 0, 0]\n`
       );
     } else {
-      setEditorContent(`# Archivo: ${name}\n# EnigmaCraft Staff Cloud Storage\n\n`);
+      setEditorContent(`# Documento: ${name}\n# EnigmaCraft Staff Cloud Storage\n\nEste archivo está registrado y listo para ser editado desde el visor.\n`);
     }
   }
 
