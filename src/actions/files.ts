@@ -352,7 +352,17 @@ export async function getFileContentAction(fileId: string) {
   if (node.url && node.url.startsWith("data:text/plain;charset=utf-8;base64,")) {
     const b64 = node.url.replace("data:text/plain;charset=utf-8;base64,", "");
     try {
-      return Buffer.from(b64, "base64").toString("utf-8");
+      const decoded = Buffer.from(b64, "base64").toString("utf-8");
+      const lower = node.name.toLowerCase();
+      // If a non-normative file was previously persisted with the old generic normativa template, discard and recalculate
+      if (
+        !lower.includes("norma") &&
+        !lower.includes("regla") &&
+        decoded.startsWith("# NORMATIVA OFICIAL DE STAFF")
+      ) {
+        return null;
+      }
+      return decoded;
     } catch {
       return null;
     }
