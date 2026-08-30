@@ -16,16 +16,23 @@ function base(className?: string) {
 
 export const IconDashboard = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <rect x="3" y="3" width="7" height="9" rx="1" />
-    <rect x="14" y="3" width="7" height="5" rx="1" />
-    <rect x="14" y="12" width="7" height="9" rx="1" />
-    <rect x="3" y="16" width="7" height="5" rx="1" />
+    <rect x="3" y="3" width="7" height="9" rx="1.5" />
+    <rect x="14" y="3" width="7" height="5" rx="1.5" />
+    <rect x="14" y="12" width="7" height="9" rx="1.5" />
+    <rect x="3" y="16" width="7" height="5" rx="1.5" />
   </svg>
 );
 
 export const IconChat = ({ className }: IconProps) => (
   <svg {...base(className)}>
     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
+
+export const IconMail = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
   </svg>
 );
 
@@ -64,6 +71,15 @@ export const IconUsers = ({ className }: IconProps) => (
   </svg>
 );
 
+export const IconContact = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
 export const IconSettings = ({ className }: IconProps) => (
   <svg {...base(className)}>
     <circle cx="12" cy="12" r="3" />
@@ -76,6 +92,20 @@ export const IconLogout = ({ className }: IconProps) => (
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
+export const IconMegaphone = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M3 11l19-9-9 19-2-8-8-2z" />
+  </svg>
+);
+
+export const IconBackup = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <polyline points="1 4 1 10 7 10" />
+    <polyline points="23 20 23 14 17 14" />
+    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
   </svg>
 );
 
@@ -100,10 +130,11 @@ export const IconTrash = ({ className }: IconProps) => (
   </svg>
 );
 
-export const IconMegaphone = ({ className }: IconProps) => (
+export const IconDownload = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <path d="m3 11 18-5v12L3 14v-3z" />
-    <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 
@@ -114,18 +145,17 @@ export const IconArrowLeft = ({ className }: IconProps) => (
   </svg>
 );
 
-export const IconDownload = ({ className }: IconProps) => (
+export const IconArrowRight = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
   </svg>
 );
 
-export const IconBackup = ({ className }: IconProps) => (
+export const IconClock = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <polyline points="23 4 23 10 17 10" />
-    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
   </svg>
 );
 
@@ -152,38 +182,52 @@ export const IconSearch = ({ className }: IconProps) => (
   </svg>
 );
 
-export const IconMail = ({ className }: IconProps) => (
+export const IconSparkles = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <polyline points="22,6 12,13 2,6" />
+    <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
   </svg>
 );
 
-export const IconContact = ({ className }: IconProps) => (
+export const IconCheck = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
-export const IconClock = ({ className }: IconProps) => (
+export const IconCopy = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 );
 
-export const IconArrowRight = ({ className }: IconProps) => (
+export const IconServer = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <line x1="5" y1="12" x2="19" y2="12" />
-    <polyline points="12 5 19 12 12 19" />
+    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+    <line x1="6" y1="6" x2="6.01" y2="6" />
+    <line x1="6" y1="18" x2="6.01" y2="18" />
+  </svg>
+);
+
+export const IconFire = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+  </svg>
+);
+
+export const IconDiamond = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M6 3h12l4 6-10 12L2 9z" />
+    <path d="M2 9h20M12 21L7.5 9 12 3l4.5 6L12 21z" />
   </svg>
 );
 
 export const IconAlertTriangle = ({ className }: IconProps) => (
   <svg {...base(className)}>
-    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
     <line x1="12" y1="9" x2="12" y2="13" />
     <line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
+

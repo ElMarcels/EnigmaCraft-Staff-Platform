@@ -1,107 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { User, Role } from "@prisma/client";
+import type { User } from "@prisma/client";
 import { logoutAction } from "@/actions/auth";
-import { ROLE_META } from "@/lib/role-meta";
-import { Avatar } from "@/components/role-badge";
+import { Avatar, RoleBadge } from "@/components/role-badge";
 import { GlobalSearch } from "@/components/global-search";
 import {
-  IconDashboard,
-  IconChat,
-  IconMail,
-  IconContact,
-  IconFolder,
-  IconMegaphone,
-  IconShield,
-  IconUsers,
-  IconBackup,
-  IconSettings,
   IconLogout,
   IconBell,
 } from "@/components/icons";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: (p: { className?: string }) => React.ReactNode;
-  roles?: Role[];
-  section?: string;
-};
-
-const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Panel", icon: IconDashboard },
-  { href: "/chat", label: "Chat", icon: IconChat },
-  { href: "/dm", label: "Mensajes", icon: IconMail },
-  { href: "/files", label: "Archivos", icon: IconFolder },
-  { href: "/announcements", label: "Anuncios", icon: IconMegaphone },
-  { href: "/directory", label: "Contactos", icon: IconContact },
-  {
-    href: "/founder",
-    label: "Panel de Fundadores",
-    icon: IconShield,
-    roles: ["FOUNDER"],
-    section: "Fundadores",
-  },
-  {
-    href: "/founder/users",
-    label: "Usuarios",
-    icon: IconUsers,
-    roles: ["FOUNDER"],
-    section: "Fundadores",
-  },
-  {
-    href: "/founder/backups",
-    label: "Copias de seguridad",
-    icon: IconBackup,
-    roles: ["FOUNDER"],
-    section: "Fundadores",
-  },
-  {
-    href: "/founder/audit",
-    label: "Registro",
-    icon: IconBell,
-    roles: ["FOUNDER"],
-    section: "Fundadores",
-  },
-  {
-    href: "/notifications",
-    label: "Notificaciones",
-    icon: IconBell,
-    section: "Cuenta",
-  },
-  {
-    href: "/settings",
-    label: "Ajustes",
-    icon: IconSettings,
-    section: "Cuenta",
-  },
-];
-
-function NavLink({
-  item,
-  currentPath,
-}: {
-  item: NavItem;
-  currentPath: string;
-}) {
-  const active = currentPath === item.href || currentPath.startsWith(item.href + "/");
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-        active
-          ? "bg-indigo-500/15 font-semibold text-indigo-300"
-          : "text-white/60 hover:bg-white/5 hover:text-white"
-      }`}
-    >
-      <Icon className="h-[18px] w-[18px]" />
-      {item.label}
-    </Link>
-  );
-}
 
 export function AppShell({
   user,
@@ -112,94 +19,86 @@ export function AppShell({
   unreadCount: number;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const founderVisible = user.role === "FOUNDER";
-  const roleMeta = ROLE_META[user.role];
-
-  const visibleNav = NAV.filter(
-    (item) => !item.roles || (founderVisible && item.roles.includes("FOUNDER"))
-  );
-
-  const sections: { title?: string; items: NavItem[] }[] = [];
-  for (const item of visibleNav) {
-    const last = sections[sections.length - 1];
-    if (last && last.title === item.section) {
-      last.items.push(item);
-    } else {
-      sections.push({ title: item.section, items: [item] });
-    }
-  }
-
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-white/10 bg-[#0d1017]">
-        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 font-bold text-white">
+    <div className="flex min-h-screen flex-col bg-background selection:bg-rose-500/30">
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#07090e]/85 backdrop-blur-2xl px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+        {/* Brand Left */}
+        <Link href="/dashboard" className="flex items-center gap-3 group select-none">
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-700 text-lg font-extrabold text-white shadow-lg shadow-rose-950/60 border border-white/20 transition-transform group-hover:scale-105">
             EC
           </div>
           <div>
-            <div className="text-sm font-bold text-white">EnigmaCraft</div>
-            <div className="text-[11px] text-white/40">Staff Platform</div>
+            <div className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
+              Enigma<span className="text-rose-500">Craft</span>
+            </div>
+            <div className="text-[10px] font-semibold tracking-wider uppercase text-slate-400">
+              Staff Network
+            </div>
           </div>
-        </div>
+        </Link>
 
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+        {/* Center Global Search */}
+        <div className="hidden md:block w-72 max-w-sm">
           <GlobalSearch userId={user.id} />
-          {sections.map((section, i) => (
-            <div key={i}>
-              {section.title ? (
-                <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-white/30">
-                  {section.title}
-                </div>
-              ) : null}
-              <div className="space-y-0.5">
-                {section.items.map((item) => (
-                  <NavLink key={item.href} item={item} currentPath={pathname} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-white/10 p-3">
-          <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-            <Avatar name={user.displayName} color={user.avatarColor} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-white">
-                {user.displayName}
-              </div>
-              <div className="truncate text-xs text-white/40">
-                <span className={roleMeta.color}>{roleMeta.label}</span>
-              </div>
-            </div>
-            <form action={logoutAction}>
-              <button
-                title="Cerrar sesión"
-                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <IconLogout />
-              </button>
-            </form>
-          </div>
         </div>
-      </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {unreadCount > 0 ? (
+        {/* Right User & Actions Profile */}
+        <div className="flex items-center gap-3">
           <Link
             href="/notifications"
-            className="flex items-center gap-2 border-b border-amber-400/20 bg-amber-500/10 px-5 py-2 text-sm text-amber-300 transition-colors hover:bg-amber-500/20"
+            className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+            title="Notificaciones"
           >
-            <IconBell className="h-4 w-4" />
-            Tienes {unreadCount} notificación{unreadCount > 1 ? "es" : ""} sin
-            leer.
-            <span className="ml-auto text-xs underline-offset-2 hover:underline">
-              Ver
-            </span>
+            <IconBell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+            )}
           </Link>
-        ) : null}
-        <main className="flex-1 overflow-y-auto">{children}</main>
-      </div>
+
+          {/* User Badge */}
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-1.5">
+            <Avatar
+              name={user.displayName}
+              color={user.avatarColor}
+              isOnline={true}
+              className="h-7 w-7 text-xs"
+            />
+            <div className="hidden sm:block text-left">
+              <div className="text-xs font-bold text-white leading-tight">
+                {user.displayName}
+              </div>
+              <div className="text-[10px] text-slate-400">
+                <RoleBadge role={user.role} showDot={false} className="py-0 px-1.5 text-[9px]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Logout Action */}
+          <form action={logoutAction}>
+            <button
+              title="Cerrar sesión"
+              className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-rose-500/15 hover:text-rose-300 cursor-pointer active:scale-95 border border-white/[0.08]"
+            >
+              <IconLogout className="h-4 w-4" />
+            </button>
+          </form>
+        </div>
+      </header>
+
+      {/* Global Notification Banner if Unread */}
+      {unreadCount > 0 ? (
+        <Link
+          href="/notifications"
+          className="flex items-center justify-center gap-2.5 border-b border-rose-500/30 bg-gradient-to-r from-rose-950/40 via-red-900/30 to-rose-950/40 px-5 py-2 text-xs font-semibold text-rose-200 backdrop-blur-md transition-colors hover:bg-rose-900/40"
+        >
+          <IconBell className="h-4 w-4 text-rose-400 animate-pulse" />
+          <span>Tienes {unreadCount} notificación{unreadCount > 1 ? "es" : ""} sin leer en el sistema.</span>
+        </Link>
+      ) : null}
+
+      {/* Main Full-Width Content Container */}
+      <main className="flex-1 w-full">{children}</main>
     </div>
   );
 }

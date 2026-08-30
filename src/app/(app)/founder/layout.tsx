@@ -15,18 +15,35 @@ export default async function FounderLayout({
   if (user.role !== "FOUNDER") redirect("/dashboard");
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-amber-400/20 bg-amber-500/[0.06] px-6 py-3">
-        <div className="flex items-center gap-2 text-amber-300">
-          <IconShield className="h-5 w-5" />
-          <span className="font-semibold">Panel de Fundadores</span>
-          <span className="text-xs text-amber-200/50">
-            · Acceso exclusivo · {user.displayName}
-          </span>
+    <div className="flex min-h-screen flex-col selection:bg-rose-500/30">
+      {/* Unified Liquid Glass Founder Header */}
+      <div className="border-b border-white/[0.08] bg-[#090d16]/85 backdrop-blur-2xl px-6 md:px-8 py-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-700 text-white shadow-md shadow-rose-950/60 border border-white/20">
+              <IconShield className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-extrabold text-white tracking-tight">
+                  Panel de Fundadores
+                </h1>
+                <span className="rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-300 uppercase tracking-wider">
+                  Acceso Total
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Consola ejecutiva y control administrativo para {user.displayName}
+              </p>
+            </div>
+          </div>
+
+          {/* Sub Navigation Segmented Control */}
+          <FounderNav />
         </div>
       </div>
-      <FounderNav />
-      <div className="flex-1 overflow-y-auto p-6">{children}</div>
+
+      <div className="flex-1 w-full">{children}</div>
     </div>
   );
 }

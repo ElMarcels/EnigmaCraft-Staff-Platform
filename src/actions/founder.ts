@@ -58,7 +58,7 @@ export async function createUserAction(
       data: {
         channelId: welcomeChannel.id,
         authorId: founder.id,
-        content: `👋 ¡Bienvenido/a ${created.displayName} (${roleMeta.label}) al staff de EnigmaCraft!`,
+        content: `Bienvenido/a ${created.displayName} (${roleMeta.label}) al staff de EnigmaCraft!`,
       },
     });
   }

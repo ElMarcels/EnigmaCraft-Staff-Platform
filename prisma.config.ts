@@ -7,9 +7,7 @@ if (existsSync(".env")) loadEnvFile(".env");
 function resolveDbUrl(): string {
   const url = (process.env.DATABASE_URL || "").trim();
   if (!url) {
-    throw new Error(
-      "DATABASE_URL no está configurada. Añádela en Vercel → Project → Settings → Environment Variables (Production, Preview y Development) con la URL de tu PostgreSQL."
-    );
+    return "postgresql://dummy:dummy@localhost:5432/dummy";
   }
   return url;
 }

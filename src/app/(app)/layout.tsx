@@ -19,9 +19,14 @@ export default async function AppLayout({
 
   await touchLastSeen(user);
 
-  const unreadCount = await prisma.notification.count({
-    where: { userId: user.id, read: false },
-  });
+  let unreadCount = 0;
+  try {
+    unreadCount = await prisma.notification.count({
+      where: { userId: user.id, read: false },
+    });
+  } catch {
+    // Graceful offline fallback
+  }
 
   return (
     <AppShell user={user} unreadCount={unreadCount}>

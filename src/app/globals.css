@@ -1,60 +1,374 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0e14;
-  --foreground: #e6e9ef;
+  --background: #07090e;
+  --background-elevated: #0c1017;
+  --foreground: #f1f5f9;
+  --foreground-muted: #94a3b8;
+  --foreground-subtle: #64748b;
+
+  /* Ruby / Crimson Accents */
+  --ruby-primary: #e11d48;
+  --ruby-light: #fb7185;
+  --ruby-glow: rgba(225, 29, 72, 0.35);
+  --ruby-glow-soft: rgba(225, 29, 72, 0.15);
+  --ruby-surface: rgba(225, 29, 72, 0.08);
+  --ruby-border: rgba(244, 63, 94, 0.25);
+
+  /* Glass Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg-hover: rgba(255, 255, 255, 0.06);
+  --glass-bg-active: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-light: rgba(255, 255, 255, 0.16);
+  --glass-highlight: rgba(255, 255, 255, 0.12);
+
+  /* Animation Curves (Emil Kowalski Standards) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --color-ruby: var(--ruby-primary);
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 * {
-  border-color: rgb(255 255 255 / 0.08);
+  border-color: var(--glass-border);
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(225, 29, 72, 0.16), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(190, 18, 60, 0.08), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 10% 90%, rgba(136, 19, 55, 0.08), transparent 50%);
+  background-attachment: fixed;
 }
 
-/* Thin custom scrollbar */
+/* Floating Ambient Particles Layer */
+.particles-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.8) 0%, rgba(225, 29, 72, 0) 70%);
+  opacity: 0.35;
+  filter: blur(1px);
+  animation: particle-float linear infinite;
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(100vh) translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.45;
+  }
+  85% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(30px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 0.12);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 0.2);
+  background: rgba(244, 63, 94, 0.45);
 }
 
+/* Base Glassmorphism Component Layer */
 @layer components {
+  /* Floating Reactive Bottom Pill Dock Navigation */
+  .pill-dock {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 9999px;
+    background: rgba(9, 13, 22, 0.88);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.75), 0 0 35px -5px rgba(225, 29, 72, 0.3);
+    transition: all 300ms var(--ease-out);
+  }
+
+  .pill-dock-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    color: #94a3b8;
+    cursor: pointer;
+    user-select: none;
+    padding: 0 0.65rem;
+    transition: all 300ms var(--ease-out);
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pill-dock-item:not(.pill-dock-item-active):hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+  }
+
+  .pill-dock-item:active {
+    transform: scale(0.94);
+  }
+
+  /* Active Morphing Pill with Ruby Glow */
+  .pill-dock-item-active {
+    color: #ffffff;
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 55%, #be123c 100%);
+    box-shadow: 0 4px 18px rgba(225, 29, 72, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    padding: 0 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Dynamic Typewriter / Reveal Label Animation */
+  .pill-dock-label {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    transform: translateX(-4px);
+    transition: max-width 320ms var(--ease-out), opacity 240ms var(--ease-out), transform 320ms var(--ease-out);
+  }
+
+  .pill-dock-item-active .pill-dock-label {
+    max-width: 140px;
+    opacity: 1;
+    transform: translateX(0);
+    animation: type-reveal 320ms var(--ease-out) forwards;
+  }
+
+  @keyframes type-reveal {
+    0% {
+      opacity: 0;
+      clip-path: inset(0 100% 0 0);
+      transform: translateX(-6px);
+    }
+    100% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+      transform: translateX(0);
+    }
+  }
+
+  /* Ultra-sleek Liquid Glass Card */
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 1rem;
+    box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Interactive Liquid Glass Card with Hover Lift */
+  .glass-card-interactive {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.018) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    transition: transform 200ms var(--ease-out), border-color 200ms var(--ease-out), background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .glass-card-interactive:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+      border-color: rgba(244, 63, 94, 0.35);
+      border-top-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 16px 40px -8px rgba(225, 29, 72, 0.18), 0 0 20px -2px rgba(225, 29, 72, 0.1);
+    }
+  }
+
+  /* Backwards compatibility for .card */
   .card {
-    @apply rounded-xl border border-white/10 bg-white/[0.03] p-5;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   }
+
+  /* Crimson / Ruby Primary Button with Tactile Feedback */
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-white shadow-lg overflow-hidden cursor-pointer select-none;
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 60%, #be123c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 18px rgba(225, 29, 72, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    padding: 0.55rem 1.15rem;
+    font-size: 0.875rem;
+    transition: transform 160ms var(--ease-out), filter 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
   }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 6px 24px rgba(225, 29, 72, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Glass Secondary Button */
   .btn-secondary {
-    @apply inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-white cursor-pointer select-none;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 0.55rem 1.15rem;
+    font-size: 0.875rem;
+    transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
   }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+
+  /* Danger Button */
   .btn-danger {
-    @apply inline-flex items-center gap-2 rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-rose-200 cursor-pointer select-none;
+    background: rgba(225, 29, 72, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.25);
+    padding: 0.55rem 1.15rem;
+    font-size: 0.875rem;
+    transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out);
   }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-danger:hover {
+      background: rgba(225, 29, 72, 0.22);
+      border-color: rgba(244, 63, 94, 0.4);
+    }
+  }
+
+  .btn-danger:active {
+    transform: scale(0.97);
+  }
+
+  /* Glass Form Input with Glowing Focus */
   .input {
-    @apply w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400;
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 transition-all duration-200;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    outline: none;
   }
+
+  .input:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .input:focus {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #f43f5e;
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.18), 0 0 16px -2px rgba(225, 29, 72, 0.25);
+  }
+
+  select.input option {
+    background-color: #0c101a;
+    color: #f1f5f9;
+    padding: 8px 12px;
+  }
+
   .label {
-    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-white/50;
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400;
+  }
+}
+
+/* Animations */
+@keyframes subtle-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: 0.85; }
+}
+
+.animate-pulse-subtle {
+  animation: subtle-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
