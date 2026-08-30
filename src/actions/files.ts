@@ -23,15 +23,29 @@ async function collectBlobKeys(nodeId: string): Promise<string[]> {
   return keys;
 }
 
-function sanitize(name: string): string {
+function sanitize(name: string, fallback = "archivo"): string {
+  if (!name) return fallback;
   const n = name.replace(/[\\/]/g, "").trim();
-  if (!n) throw new Error("Nombre no válido");
-  return n.slice(0, 120);
+  return (n || fallback).slice(0, 120);
+}
+
+function inferMimeType(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  if (ext === "yml" || ext === "yaml") return "text/yaml";
+  if (ext === "json") return "application/json";
+  if (ext === "properties" || ext === "txt" || ext === "log") return "text/plain";
+  if (ext === "docx" || ext === "doc") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (ext === "xlsx" || ext === "xls" || ext === "csv") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (ext === "jar") return "application/java-archive";
+  if (ext === "schem" || ext === "schematic") return "application/x-minecraft-schematic";
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  return "application/octet-stream";
 }
 
 export async function createFolder(formData: FormData) {
   const user = await getCurrentUserOrThrow();
-  const name = sanitize(String(formData.get("name") || ""));
+  const name = sanitize(String(formData.get("name") || ""), "Nueva Carpeta");
   const parentId = String(formData.get("parentId") || "") || null;
 
   if (parentId) {
@@ -94,7 +108,7 @@ export async function deleteFileOrFolder(nodeId: string) {
 export async function renameFileOrFolder(formData: FormData) {
   const user = await getCurrentUserOrThrow();
   const id = String(formData.get("id") || "");
-  const name = sanitize(String(formData.get("name") || ""));
+  const name = sanitize(String(formData.get("name") || ""), "archivo");
   const node = await prisma.fileNode.findUnique({ where: { id } });
   if (!node) return;
   if (node.ownerId !== user.id && !["FOUNDER", "ADMIN"].includes(user.role)) {
@@ -119,13 +133,12 @@ export async function syncLocalDirectoryAction(
 ) {
   try {
     const user = await getCurrentUserOrThrow();
-    const cleanFolderName = sanitize(folderName || "Carpeta Sincronizada");
+    const cleanFolderName = sanitize(folderName, "Carpeta Sincronizada");
 
     // Create root synced folder
     let rootFolder = await prisma.fileNode.findFirst({
       where: {
         name: cleanFolderName,
-        isFolder: true,
         parentId: parentId || null,
       },
     });
@@ -139,6 +152,11 @@ export async function syncLocalDirectoryAction(
           ownerId: user.id,
         },
       });
+    } else if (!rootFolder.isFolder) {
+      rootFolder = await prisma.fileNode.update({
+        where: { id: rootFolder.id },
+        data: { isFolder: true },
+      });
     }
 
     // Helper to ensure nested subfolder path exists
@@ -149,11 +167,12 @@ export async function syncLocalDirectoryAction(
       let currentParentId = parentFolderId;
 
       for (const folderName of pathParts) {
-        const cleanSubName = sanitize(folderName);
+        const cleanSubName = sanitize(folderName, "subcarpeta");
+        if (!cleanSubName) continue;
+
         let subFolder = await prisma.fileNode.findFirst({
           where: {
             name: cleanSubName,
-            isFolder: true,
             parentId: currentParentId,
           },
         });
@@ -167,6 +186,11 @@ export async function syncLocalDirectoryAction(
               ownerId: user.id,
             },
           });
+        } else if (!subFolder.isFolder) {
+          subFolder = await prisma.fileNode.update({
+            where: { id: subFolder.id },
+            data: { isFolder: true },
+          });
         }
 
         currentParentId = subFolder.id;
@@ -179,7 +203,8 @@ export async function syncLocalDirectoryAction(
 
     // Create files and nested subfolders
     for (const f of files) {
-      const rawPath = f.relativePath.replace(/\\/g, "/");
+      const rawPath = f.relativePath.replace(/\\/g, "/").trim();
+      if (!rawPath) continue;
 
       // If it is explicitly a folder or ends with a slash
       if (f.isFolder || rawPath.endsWith("/")) {
@@ -213,13 +238,14 @@ export async function syncLocalDirectoryAction(
           ? await ensureFolderPath(subfolderSegments, rootFolder.id)
           : rootFolder.id;
 
-      const cleanName = sanitize(fileName);
+      const cleanName = sanitize(fileName, "archivo.txt");
+      const safeSize = Math.min(2147483647, Math.max(0, Math.floor(f.size || 0)));
+      const mime = inferMimeType(cleanName);
 
-      const existingFile = await prisma.fileNode.findFirst({
+      const existingNode = await prisma.fileNode.findFirst({
         where: {
           name: cleanName,
           parentId: targetParentId,
-          isFolder: false,
         },
       });
 
@@ -227,11 +253,13 @@ export async function syncLocalDirectoryAction(
         ? `data:text/plain;charset=utf-8;base64,${Buffer.from(f.content).toString("base64")}`
         : null;
 
-      if (existingFile) {
+      if (existingNode) {
         await prisma.fileNode.update({
-          where: { id: existingFile.id },
+          where: { id: existingNode.id },
           data: {
-            size: Math.floor(f.size || 0),
+            isFolder: false,
+            size: safeSize,
+            mimeType: mime,
             ...(contentPayload ? { url: contentPayload } : {}),
           },
         });
@@ -240,7 +268,8 @@ export async function syncLocalDirectoryAction(
           data: {
             name: cleanName,
             isFolder: false,
-            size: Math.floor(f.size || 0),
+            size: safeSize,
+            mimeType: mime,
             parentId: targetParentId,
             ownerId: user.id,
             url: contentPayload,

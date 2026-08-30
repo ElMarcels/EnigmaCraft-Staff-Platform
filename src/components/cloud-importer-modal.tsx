@@ -72,7 +72,16 @@ export function CloudImporterModal({
 
     const items: string[] = [];
     for (const file of data.files) {
-      const fullPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+      let displayName = file.name;
+      if (file.mimeType === "application/vnd.google-apps.document" && !displayName.includes(".")) {
+        displayName += ".docx";
+      } else if (file.mimeType === "application/vnd.google-apps.spreadsheet" && !displayName.includes(".")) {
+        displayName += ".xlsx";
+      } else if (file.mimeType === "application/vnd.google-apps.presentation" && !displayName.includes(".")) {
+        displayName += ".pptx";
+      }
+
+      const fullPath = currentPath ? `${currentPath}/${displayName}` : displayName;
       if (file.mimeType === "application/vnd.google-apps.folder") {
         const nested = await scanGDriveFolder(file.id, fullPath, apiKey);
         if (nested.length === 0) {
@@ -138,9 +147,10 @@ export function CloudImporterModal({
 
     // Parse each line (supports 'carpeta/', 'carpeta/subcarpeta/archivo.yml', 'doc.docx')
     const realFiles = rawLines.map((line) => {
-      const cleanPath = line.replace(/\\/g, "/");
+      const cleanPath = line.replace(/\\/g, "/").trim();
       const isExplicitFolder = cleanPath.endsWith("/");
-      const name = cleanPath.replace(/\/+$/, "").split("/").pop() || cleanPath;
+      const cleanWithoutSlash = cleanPath.replace(/\/+$/, "");
+      const name = cleanWithoutSlash.split("/").pop() || cleanWithoutSlash;
       const ext = name.split(".").pop()?.toLowerCase() || "";
 
       let size = 15000;
@@ -148,7 +158,7 @@ export function CloudImporterModal({
       else if (["docx", "doc"].includes(ext)) size = 28500;
       else if (["xlsx", "xls", "csv"].includes(ext)) size = 45200;
       else if (["jar", "zip", "schem"].includes(ext)) size = 5240000;
-      else if (["yml", "yaml", "json"].includes(ext)) size = 12400;
+      else if (["yml", "yaml", "json", "properties"].includes(ext)) size = 12400;
 
       return {
         name,
@@ -170,17 +180,21 @@ export function CloudImporterModal({
     const cleanFolder = gdriveFolderName.trim() || `Google Drive (${folderId.slice(0, 8)})`;
 
     try {
-      await syncLocalDirectoryAction(cleanFolder, realFiles, parentId);
+      const res = await syncLocalDirectoryAction(cleanFolder, realFiles, parentId);
+      if (!res.success) {
+        throw new Error(res.error || "Error al importar de Google Drive");
+      }
       setGdriveLoading(false);
       sounds.playSuccess();
-      toast.success(`¡Google Drive importado con jerarquía de subcarpetas!`, {
-        description: `Se han creado las carpetas y archivos en "${cleanFolder}".`,
+      toast.success(`¡Google Drive importado con éxito!`, {
+        description: `Se han creado ${res.count} archivos y carpetas en "${cleanFolder}".`,
       });
       if (onImportComplete) onImportComplete();
       onClose();
-    } catch {
+    } catch (err: unknown) {
       setGdriveLoading(false);
-      toast.error("Error al registrar archivos en Drive.");
+      const msg = err instanceof Error ? err.message : "Error al importar Google Drive.";
+      toast.error(msg);
     }
   }
 

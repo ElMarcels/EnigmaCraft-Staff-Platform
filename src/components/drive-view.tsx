@@ -48,7 +48,7 @@ function fmtBytes(n: number) {
 }
 
 function getFileIconStyle(name: string) {
-  const ext = name.split(".").pop()?.toLowerCase();
+  const ext = name.split(".").pop()?.toLowerCase() || "";
   if (ext === "schem" || ext === "schematic" || ext === "nbt") {
     return {
       type: "schematics",
@@ -70,6 +70,20 @@ function getFileIconStyle(name: string) {
       color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
     };
   }
+  if (ext === "docx" || ext === "doc" || ext === "txt" || ext === "md" || ext === "pdf") {
+    return {
+      type: "docs",
+      badge: "DOCX",
+      color: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    };
+  }
+  if (ext === "xlsx" || ext === "xls" || ext === "csv" || ext === "tsv") {
+    return {
+      type: "sheets",
+      badge: "EXCEL",
+      color: "bg-teal-500/20 text-teal-300 border-teal-500/30",
+    };
+  }
   if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "gif" || ext === "webp") {
     return {
       type: "media",
@@ -79,7 +93,7 @@ function getFileIconStyle(name: string) {
   }
   return {
     type: "others",
-    badge: "DOC",
+    badge: "FILE",
     color: "bg-slate-500/20 text-slate-300 border-slate-500/30",
   };
 }

@@ -104,8 +104,18 @@ export default async function FilesPage({
   const user = await getCurrentUser();
 
   const rootId: string | null = folder || null;
-  let items = rootId && FOLDER_CONTENTS[rootId] ? FOLDER_CONTENTS[rootId].items : (rootId ? [] : ROOT_DEMO_ITEMS);
-  let path: { id: string; name: string }[] = rootId && FOLDER_CONTENTS[rootId] ? [{ id: rootId, name: FOLDER_CONTENTS[rootId].name }] : [];
+  let items: {
+    id: string;
+    name: string;
+    isFolder: boolean;
+    size: number;
+    mimeType: string | null;
+    createdAt: string;
+    ownerName: string;
+    ownerId: string | null;
+    url?: string | null;
+  }[] = [];
+  let path: { id: string; name: string }[] = [];
 
   try {
     if (rootId) {
@@ -130,6 +140,7 @@ export default async function FilesPage({
       orderBy: [{ isFolder: "desc" }, { name: "asc" }],
       include: { owner: true },
     });
+
     if (dbItems.length > 0) {
       items = dbItems.map((i) => ({
         id: i.id,
@@ -142,9 +153,21 @@ export default async function FilesPage({
         ownerId: i.ownerId || "",
         url: i.url,
       }));
+    } else if (!rootId) {
+      // Show default root starter templates only if database has 0 items at root
+      items = ROOT_DEMO_ITEMS.map((d) => ({
+        ...d,
+        url: null,
+      }));
     }
   } catch {
     // Fallback
+    if (!rootId) {
+      items = ROOT_DEMO_ITEMS.map((d) => ({
+        ...d,
+        url: null,
+      }));
+    }
   }
 
   let totalUsedBytes = items.reduce((acc, it) => acc + (it.size || 0), 0);
