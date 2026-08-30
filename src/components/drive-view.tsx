@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { sounds } from "@/lib/sound-effects";
 import { LocalFolderSyncModal } from "@/components/local-folder-sync-modal";
 import { ConfigDiffEditor } from "@/components/config-diff-editor";
+import { CloudImporterModal } from "@/components/cloud-importer-modal";
 import {
   createFolder,
   deleteFileOrFolder,
@@ -132,8 +133,9 @@ export function DriveView({
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Modals for Local Folder Sync and YAML Diff Editor
+  // Modals for Local Folder Sync, Cloud Import and YAML Diff Editor
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [cloudModalOpen, setCloudModalOpen] = useState(false);
   const [editorModalOpen, setEditorModalOpen] = useState(false);
   const [editorFileName, setEditorFileName] = useState("config.yml");
   const [editorContent, setEditorContent] = useState(
@@ -145,6 +147,37 @@ export function DriveView({
     setEditorFileName(name);
     if (sampleContent) {
       setEditorContent(sampleContent);
+    } else {
+      const ext = name.split(".").pop()?.toLowerCase();
+      if (ext === "yml" || ext === "yaml") {
+        setEditorContent(
+          `# Configuración: ${name}\n# EnigmaCraft Network Platform\nversion: "1.21.4"\nenabled: true\nsettings:\n  debug-mode: false\n  cache-ttl-seconds: 3600\n  auto-save: true\n\nmessages:\n  prefix: "&c[EnigmaCraft]&r "\n  success: "&aConfiguración cargada correctamente."\n  error: "&cError al procesar el comando."\n`
+        );
+      } else if (ext === "json") {
+        setEditorContent(
+          JSON.stringify(
+            {
+              name: name,
+              server: "EnigmaCraft Survival Custom",
+              environment: "production",
+              maxConnections: 150,
+              features: { autoBackup: true, antiLag: true },
+            },
+            null,
+            2
+          )
+        );
+      } else if (ext === "properties") {
+        setEditorContent(
+          `# Minecraft server properties\n# ${name}\nserver-port=25565\nmotd=§c§lEnigmaCraft §8| §7Staff Network 1.21.x\nonline-mode=true\nmax-players=150\npvp=true\ndifficulty=hard\n`
+        );
+      } else if (ext === "schem" || ext === "schematic") {
+        setEditorContent(
+          `# Metadatos del Esquemático de WorldEdit (.schem)\nname: "${name}"\nformat: "Sponge V2 / FastAsyncWorldEdit"\ndimensions:\n  width_x: 64\n  height_y: 48\n  length_z: 64\nblocks_count: 196608\npaste_offset: [0, 0, 0]\n`
+        );
+      } else {
+        setEditorContent(`# Archivo: ${name}\n# EnigmaCraft Staff Cloud Storage\n\n`);
+      }
     }
     setEditorModalOpen(true);
   }
@@ -251,13 +284,22 @@ export function DriveView({
         isOpen={syncModalOpen}
         onClose={() => setSyncModalOpen(false)}
         existingFiles={items}
+        parentId={folderId}
         onSyncComplete={() => router.refresh()}
+      />
+
+      <CloudImporterModal
+        isOpen={cloudModalOpen}
+        parentId={folderId}
+        onClose={() => setCloudModalOpen(false)}
+        onImportComplete={() => router.refresh()}
       />
 
       <ConfigDiffEditor
         isOpen={editorModalOpen}
         fileName={editorFileName}
         initialContent={editorContent}
+        parentId={folderId}
         onClose={() => setEditorModalOpen(false)}
       />
 
@@ -328,7 +370,21 @@ export function DriveView({
             title="Vincular carpeta de tu ordenador local"
           >
             <IconFolder className="h-4 w-4 text-[var(--ruby-light)]" />
-            <span>Vincular Carpeta PC</span>
+            <span>Vincular PC</span>
+          </button>
+
+          {/* Cloud Importer Button (GitHub & GDrive) */}
+          <button
+            type="button"
+            onClick={() => {
+              sounds.playPop();
+              setCloudModalOpen(true);
+            }}
+            className="btn-secondary text-xs font-semibold flex items-center gap-1.5"
+            title="Conectar repositorios de GitHub y Google Drive"
+          >
+            <IconDownload className="h-4 w-4 text-[var(--ruby-light)]" />
+            <span>GitHub / Drive</span>
           </button>
 
           {/* New Config / YAML Editor Button */}
@@ -563,12 +619,14 @@ export function DriveView({
                   </div>
 
                   <div>
-                    <div
-                      className="text-sm font-bold text-white tracking-tight truncate group-hover:text-rose-300 transition-colors"
-                      title={item.name}
+                    <button
+                      type="button"
+                      onClick={() => openFileEditor(item.name)}
+                      className="text-left font-bold text-white tracking-tight truncate group-hover:text-rose-300 transition-colors cursor-pointer block max-w-full"
+                      title={`Abrir ${item.name} en el editor`}
                     >
                       {item.name}
-                    </div>
+                    </button>
                     <div className="text-[11px] text-slate-400 mt-1">
                       {fmtBytes(item.size)} · Por {item.ownerName}
                     </div>
@@ -594,6 +652,15 @@ export function DriveView({
                   </button>
 
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openFileEditor(item.name)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-colors cursor-pointer"
+                      title="Ver / Editar en Editor YAML"
+                    >
+                      <IconEye className="h-4 w-4" />
+                    </button>
+
                     <a
                       href={`/api/files/${item.id}`}
                       download={item.name}

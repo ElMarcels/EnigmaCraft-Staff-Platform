@@ -49,7 +49,7 @@ export const ALL_ROLES: Role[] = [
   "STAFF",
 ];
 
-export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+export const ONLINE_WINDOW_MS = 15 * 60 * 1000;
 
 export const STATUS_META: Record<
   string,

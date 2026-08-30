@@ -87,8 +87,12 @@ export default async function ChannelPage({
         username: u.username,
         role: u.role,
         avatarColor: u.avatarColor,
-        isOnline: u.lastSeenAt ? Date.now() - new Date(u.lastSeenAt).getTime() < 300000 : false,
-        statusText: u.status || undefined,
+        isOnline:
+          (user && u.id === user.id) ||
+          (u.lastSeenAt
+            ? Date.now() - new Date(u.lastSeenAt).getTime() < 15 * 60 * 1000
+            : false),
+        statusText: u.status || (user && u.id === user.id ? "En línea ahora" : undefined),
       }));
     }
   } catch {

@@ -56,6 +56,14 @@ export async function createFolder(formData: FormData) {
   revalidatePath("/files");
 }
 
+async function deleteNodeRecursively(nodeId: string) {
+  const children = await prisma.fileNode.findMany({ where: { parentId: nodeId } });
+  for (const child of children) {
+    await deleteNodeRecursively(child.id);
+  }
+  await prisma.fileNode.delete({ where: { id: nodeId } });
+}
+
 export async function deleteFileOrFolder(nodeId: string) {
   const user = await getCurrentUserOrThrow();
   const node = await prisma.fileNode.findUnique({ where: { id: nodeId } });
@@ -66,10 +74,13 @@ export async function deleteFileOrFolder(nodeId: string) {
   ) {
     return;
   }
+
   const blobKeys = await collectBlobKeys(node.id);
   if (node.storageKey) blobKeys.push(node.storageKey);
   await Promise.all(blobKeys.map((k) => deleteBlob(k).catch(() => {})));
-  await prisma.fileNode.delete({ where: { id: nodeId } });
+
+  await deleteNodeRecursively(nodeId);
+
   await audit({
     userId: user.id,
     action: node.isFolder ? "FOLDER_DELETE" : "FILE_DELETE",
@@ -91,4 +102,118 @@ export async function renameFileOrFolder(formData: FormData) {
   }
   await prisma.fileNode.update({ where: { id }, data: { name } });
   revalidatePath("/files");
+}
+
+export type SyncedFileDTO = {
+  name: string;
+  relativePath: string;
+  size: number;
+};
+
+export async function syncLocalDirectoryAction(
+  folderName: string,
+  files: SyncedFileDTO[],
+  parentId?: string | null
+) {
+  const user = await getCurrentUserOrThrow();
+  const cleanFolderName = sanitize(folderName || "Carpeta Sincronizada");
+
+  // Create or find root synced folder
+  let rootFolder = await prisma.fileNode.findFirst({
+    where: {
+      name: cleanFolderName,
+      isFolder: true,
+      parentId: parentId || null,
+    },
+  });
+
+  if (!rootFolder) {
+    rootFolder = await prisma.fileNode.create({
+      data: {
+        name: cleanFolderName,
+        isFolder: true,
+        parentId: parentId || null,
+        ownerId: user.id,
+      },
+    });
+  }
+
+  // Create files inside this folder
+  for (const f of files) {
+    const cleanName = sanitize(f.name);
+    const existingFile = await prisma.fileNode.findFirst({
+      where: {
+        name: cleanName,
+        parentId: rootFolder.id,
+        isFolder: false,
+      },
+    });
+
+    if (existingFile) {
+      await prisma.fileNode.update({
+        where: { id: existingFile.id },
+        data: { size: Math.floor(f.size || 0) },
+      });
+    } else {
+      await prisma.fileNode.create({
+        data: {
+          name: cleanName,
+          isFolder: false,
+          size: Math.floor(f.size || 0),
+          parentId: rootFolder.id,
+          ownerId: user.id,
+        },
+      });
+    }
+  }
+
+  await audit({
+    userId: user.id,
+    action: "FOLDER_SYNC",
+    targetType: "FileNode",
+    targetId: rootFolder.id,
+    details: `${cleanFolderName} (${files.length} archivos)`,
+  });
+
+  revalidatePath("/files");
+  return { success: true, folderId: rootFolder.id, count: files.length };
+}
+
+export async function saveFileContentAction(
+  fileName: string,
+  content: string,
+  parentId?: string | null
+) {
+  const user = await getCurrentUserOrThrow();
+  const cleanName = sanitize(fileName);
+
+  const existing = await prisma.fileNode.findFirst({
+    where: {
+      name: cleanName,
+      parentId: parentId || null,
+      isFolder: false,
+    },
+  });
+
+  const size = Buffer.byteLength(content, "utf-8");
+
+  if (existing) {
+    await prisma.fileNode.update({
+      where: { id: existing.id },
+      data: { size },
+    });
+  } else {
+    await prisma.fileNode.create({
+      data: {
+        name: cleanName,
+        isFolder: false,
+        size,
+        parentId: parentId || null,
+        ownerId: user.id,
+      },
+    });
+  }
+
+  revalidatePath("/files");
+  return { success: true };
 }

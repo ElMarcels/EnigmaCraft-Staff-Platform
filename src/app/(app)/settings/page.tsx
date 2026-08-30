@@ -1,9 +1,8 @@
 import { getCurrentUser } from "@/lib/auth";
-import { RoleBadge, Avatar } from "@/components/role-badge";
-import { SettingsForm } from "@/components/settings-form";
 import { ThemeAccentPicker } from "@/components/theme-accent-picker";
+import { FullProfileEditor } from "@/components/full-profile-editor";
 import { AudioAndMinecraftSettings } from "@/components/audio-and-minecraft-settings";
-import { IconPalette, IconShield, IconUsers } from "@/components/icons";
+import { IconPalette, IconUsers } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -18,40 +17,19 @@ export default async function SettingsPage() {
           Ajustes & Personalización
         </h1>
         <p className="text-sm font-medium text-slate-400 mt-1">
-          Configura tu perfil de staff, seguridad y personaliza la estética visual de la plataforma.
+          Edita toda tu información de staff, skin de Minecraft, seguridad y estética visual.
         </p>
       </header>
 
-      {/* User Profile Card */}
-      <div className="glass-card p-6 md:p-7">
-        <h2 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-          <IconUsers className="h-4 w-4 theme-text" /> Tu Ficha de Personal
+      {/* Full Profile & Account Settings Form */}
+      <div className="glass-card p-6 md:p-7 space-y-5">
+        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+          <IconUsers className="h-4 w-4 theme-text" /> Editar Información de Perfil & Datos
         </h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <Avatar
-            name={user.displayName}
-            color={user.avatarColor}
-            className="h-16 w-16 text-2xl shadow-xl"
-            isOnline={true}
-          />
-          <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <span className="font-extrabold text-xl text-white tracking-tight">
-                {user.displayName}
-              </span>
-              <RoleBadge role={user.role} />
-            </div>
-            <div className="text-xs font-medium text-slate-400">
-              @{user.username} {user.contactDiscord ? `· Discord: ${user.contactDiscord}` : ""}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Miembro registrado desde {new Date(user.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-            </div>
-          </div>
-        </div>
+        <FullProfileEditor user={user} />
       </div>
 
-      {/* Minecraft Account & Audio Settings */}
+      {/* Audio UI Settings */}
       <div className="glass-card p-6 md:p-7">
         <AudioAndMinecraftSettings defaultNick={user.displayName} />
       </div>
@@ -67,14 +45,6 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ThemeAccentPicker />
-      </div>
-
-      {/* Security & Password */}
-      <div className="glass-card p-6 md:p-7">
-        <h2 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-          <IconShield className="h-4 w-4 text-rose-400" /> Seguridad & Contraseña
-        </h2>
-        <SettingsForm displayName={user.displayName} />
       </div>
     </div>
   );

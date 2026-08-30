@@ -1,8 +1,7 @@
-"use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { sounds } from "@/lib/sound-effects";
+import { saveFileContentAction } from "@/actions/files";
 import {
   IconClose,
   IconCheck,
@@ -14,18 +13,24 @@ export function ConfigDiffEditor({
   isOpen,
   fileName,
   initialContent = "",
+  parentId,
   onClose,
   onSave,
 }: {
   isOpen: boolean;
   fileName: string;
   initialContent?: string;
+  parentId?: string | null;
   onClose: () => void;
   onSave?: (fileName: string, newContent: string) => void;
 }) {
   const [content, setContent] = useState(initialContent);
   const [activeTab, setActiveTab] = useState<"editor" | "diff">("editor");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setContent(initialContent);
+  }, [initialContent, fileName]);
 
   if (!isOpen) return null;
 
@@ -70,14 +75,20 @@ export function ConfigDiffEditor({
     }
     setSaving(true);
     sounds.playPop();
-    await new Promise((r) => setTimeout(r, 250));
-    setSaving(false);
-    sounds.playSuccess();
-    toast.success(`Archivo "${fileName}" guardado y desplegado`, {
-      description: "Los cambios han sido aplicados al servidor de Minecraft.",
-    });
-    if (onSave) onSave(fileName, content);
-    onClose();
+
+    try {
+      await saveFileContentAction(fileName, content, parentId);
+      setSaving(false);
+      sounds.playSuccess();
+      toast.success(`Archivo "${fileName}" guardado en la nube`, {
+        description: "Los cambios han sido aplicados y persistidos en el almacenamiento de EnigmaCraft.",
+      });
+      if (onSave) onSave(fileName, content);
+      onClose();
+    } catch {
+      setSaving(false);
+      toast.error("Error al guardar el archivo.");
+    }
   }
 
   return (

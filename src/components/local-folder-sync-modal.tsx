@@ -1,8 +1,7 @@
-"use client";
-
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { sounds } from "@/lib/sound-effects";
+import { syncLocalDirectoryAction } from "@/actions/files";
 import {
   IconFolder,
   IconCheck,
@@ -26,11 +25,13 @@ export function LocalFolderSyncModal({
   isOpen,
   onClose,
   existingFiles = [],
+  parentId,
   onSyncComplete,
 }: {
   isOpen: boolean;
   onClose: () => void;
   existingFiles: { name: string; size?: number }[];
+  parentId?: string | null;
   onSyncComplete?: (syncedCount: number) => void;
 }) {
   const [folderName, setFolderName] = useState<string | null>(null);
@@ -143,37 +144,47 @@ export function LocalFolderSyncModal({
     });
   }
 
-  // Batch Sync execution (Push to cloud)
+  // Batch Sync execution (Push to cloud DB and Drive)
   async function startBatchSync() {
-    if (localFiles.length === 0) return;
+    if (localFiles.length === 0 || !folderName) return;
     setSyncing(true);
-    setSyncProgress(10);
+    setSyncProgress(20);
     sounds.playPop();
 
-    const pendingFiles = localFiles.filter((f) => f.status !== "synced");
-    const countToSync = pendingFiles.length > 0 ? pendingFiles.length : localFiles.length;
+    const dtos = localFiles.map((f) => ({
+      name: f.name,
+      relativePath: f.relativePath,
+      size: f.size,
+    }));
 
-    for (let i = 1; i <= 10; i++) {
-      await new Promise((r) => setTimeout(r, 120));
-      setSyncProgress(i * 10);
-    }
+    try {
+      setSyncProgress(50);
+      const res = await syncLocalDirectoryAction(folderName, dtos, parentId);
+      setSyncProgress(100);
 
-    // Mark all as synced
-    setLocalFiles((prev) =>
-      prev.map((f) => ({
-        ...f,
-        status: "synced" as const,
-      }))
-    );
+      // Mark all as synced
+      setLocalFiles((prev) =>
+        prev.map((f) => ({
+          ...f,
+          status: "synced" as const,
+        }))
+      );
 
-    setSyncing(false);
-    sounds.playSuccess();
-    toast.success("¡Sincronización completada con éxito!", {
-      description: `${countToSync} archivos transferidos al almacenamiento en la nube de EnigmaCraft.`,
-    });
+      setSyncing(false);
+      sounds.playSuccess();
+      toast.success(`¡Carpeta "${folderName}" sincronizada en el Drive!`, {
+        description: `Se han transferido y registrado ${res.count} archivos en la base de datos de EnigmaCraft.`,
+      });
 
-    if (onSyncComplete) {
-      onSyncComplete(countToSync);
+      if (onSyncComplete) {
+        onSyncComplete(res.count);
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    } catch {
+      setSyncing(false);
+      toast.error("Error al sincronizar con el almacenamiento.");
     }
   }
 

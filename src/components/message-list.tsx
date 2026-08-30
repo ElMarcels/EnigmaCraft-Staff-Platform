@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { deleteMessage, toggleReaction } from "@/actions/messaging";
 import { Avatar, RoleBadge } from "@/components/role-badge";
-import { IconTrash, IconPlus, IconChat, IconCheck } from "@/components/icons";
-import { statusOf, isOnline } from "@/lib/role-meta";
+import { IconTrash, IconPlus, IconChat, IconFile, IconDownload, IconClose } from "@/components/icons";
+import { isOnline } from "@/lib/role-meta";
 import { sounds } from "@/lib/sound-effects";
 import type { Role } from "@prisma/client";
 
@@ -55,6 +56,94 @@ function Mentioned({ text }: { text: string }) {
   );
 }
 
+function RenderMessageContent({
+  content,
+  onImageClick,
+}: {
+  content: string;
+  onImageClick: (url: string) => void;
+}) {
+  const lines = content.split("\n");
+  const textLines: string[] = [];
+  const images: string[] = [];
+  const files: { name: string; url: string }[] = [];
+
+  for (const line of lines) {
+    const imgMatch = line.match(/^\[img:(.+)\]$/);
+    const fileMatch = line.match(/^\[file:(.+):(.+)\]$/);
+
+    if (imgMatch) {
+      images.push(imgMatch[1]);
+    } else if (fileMatch) {
+      files.push({ name: fileMatch[1], url: fileMatch[2] });
+    } else {
+      textLines.push(line);
+    }
+  }
+
+  const cleanText = textLines.join("\n").trim();
+
+  return (
+    <div className="space-y-2">
+      {cleanText ? (
+        <p className="whitespace-pre-wrap break-words text-sm text-slate-200 leading-relaxed font-normal">
+          <Mentioned text={cleanText} />
+        </p>
+      ) : null}
+
+      {/* Render Attached Images */}
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {images.map((imgUrl, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                sounds.playPop();
+                onImageClick(imgUrl);
+              }}
+              className="relative max-w-sm rounded-2xl overflow-hidden border border-white/[0.15] bg-black/40 hover:scale-[1.01] transition-transform cursor-pointer group shadow-lg"
+            >
+              <div className="relative h-48 w-72">
+                <Image
+                  src={imgUrl}
+                  alt="Adjunto en chat"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-bold text-white backdrop-blur-[2px]">
+                🔍 Ver en pantalla completa
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Render Attached Files */}
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {files.map((file, i) => (
+            <a
+              key={i}
+              href={file.url}
+              download={file.name}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 transition-all text-xs font-semibold text-white"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg theme-icon-box">
+                <IconFile className="h-4 w-4" />
+              </div>
+              <span className="max-w-[180px] truncate">{file.name}</span>
+              <IconDownload className="h-4 w-4 text-slate-400" />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MessageList({
   messages,
   currentUserId,
@@ -66,6 +155,7 @@ export function MessageList({
   const bottomRef = useRef<HTMLDivElement>(null);
   const [palette, setPalette] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -93,6 +183,32 @@ export function MessageList({
 
   return (
     <div className="flex-1 space-y-4 overflow-y-auto p-4 md:p-6 select-text">
+      {/* Lightbox Modal */}
+      {activeLightboxImg && (
+        <div
+          onClick={() => setActiveLightboxImg(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-fadeIn cursor-zoom-out"
+        >
+          <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-3xl border border-white/20 shadow-2xl">
+            <button
+              onClick={() => setActiveLightboxImg(null)}
+              className="absolute top-3 right-3 z-10 rounded-full bg-black/60 p-2 text-white hover:bg-black/80 transition-colors"
+            >
+              <IconClose className="h-5 w-5" />
+            </button>
+            <div className="relative h-[70vh] w-[80vw] max-w-4xl">
+              <Image
+                src={activeLightboxImg}
+                alt="Vista ampliada"
+                fill
+                unoptimized
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {messages.map((msg, index) => {
         const isMe = msg.author.id === currentUserId;
         const prevMsg = index > 0 ? messages[index - 1] : null;
@@ -152,12 +268,14 @@ export function MessageList({
                 </div>
               )}
 
-              <p className="whitespace-pre-wrap break-words text-sm text-slate-200 leading-relaxed font-normal">
-                <Mentioned text={msg.content} />
-                {msg.edited ? (
-                  <span className="ml-1.5 text-[10px] text-slate-400 font-medium">(editado)</span>
-                ) : null}
-              </p>
+              <RenderMessageContent
+                content={msg.content}
+                onImageClick={(url) => setActiveLightboxImg(url)}
+              />
+
+              {msg.edited ? (
+                <span className="text-[10px] text-slate-400 font-medium">(editado)</span>
+              ) : null}
 
               {/* Reaction Badges */}
               {msg.reactions.length > 0 ? (

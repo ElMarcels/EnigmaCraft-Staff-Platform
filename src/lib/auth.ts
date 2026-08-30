@@ -155,6 +155,15 @@ export async function getCurrentUserWithStatus(): Promise<SessionStatus> {
         if (user) {
           const fresh = await reactivateIfExpired(user);
           const suspended = suspensionInfoFor(fresh);
+          // Touch lastSeenAt asynchronously
+          try {
+            await prisma.user.update({
+              where: { id: fresh.id },
+              data: { lastSeenAt: new Date() },
+            });
+          } catch {
+            // Non-blocking
+          }
           return { user: suspended ? null : fresh, suspended };
         }
       }
