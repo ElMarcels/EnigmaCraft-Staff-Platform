@@ -24,9 +24,17 @@ export function FounderNav() {
           <Link
             key={t.href}
             href={t.href}
+            style={
+              active
+                ? {
+                    background: "linear-gradient(135deg, var(--ruby-light) 0%, var(--ruby-primary) 100%)",
+                    boxShadow: "0 4px 16px var(--ruby-glow)",
+                  }
+                : undefined
+            }
             className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer select-none ${
               active
-                ? "bg-gradient-to-r from-rose-600 to-red-700 text-white shadow-md shadow-rose-950/60 border border-white/20"
+                ? "text-white border border-white/20"
                 : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
             }`}
           >

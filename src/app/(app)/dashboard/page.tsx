@@ -146,7 +146,10 @@ export default async function DashboardPage() {
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto pb-28">
       {/* Welcome Hero Banner */}
       <div className="glass-card relative overflow-hidden p-6 md:p-8">
-        <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-rose-600/15 blur-3xl pointer-events-none" />
+        <div
+          style={{ backgroundColor: "var(--ruby-glow)" }}
+          className="absolute -right-12 -top-12 h-44 w-44 rounded-full blur-3xl pointer-events-none"
+        />
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
