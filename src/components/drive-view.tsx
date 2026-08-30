@@ -225,7 +225,7 @@ export function DriveView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl theme-icon-box">
               <IconFolder className="h-5 w-5" />
             </div>
             <div>
@@ -240,13 +240,13 @@ export function DriveView({
 
           {/* Breadcrumb Path */}
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mt-3">
-            <Link href="/files" className="hover:text-rose-400 transition-colors">
+            <Link href="/files" className="theme-link">
               Raíz / Drive
             </Link>
             {breadcrumb.map((b) => (
               <span key={b.id} className="flex items-center gap-2">
                 <span className="text-slate-600">/</span>
-                <Link href={`/files?folder=${b.id}`} className="hover:text-rose-400 transition-colors text-slate-200">
+                <Link href={`/files?folder=${b.id}`} className="theme-link text-slate-200">
                   {b.name}
                 </Link>
               </span>
@@ -321,7 +321,7 @@ export function DriveView({
                 onClick={() => setFilterCategory(tab.key)}
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer ${
                   filterCategory === tab.key
-                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-sm"
+                    ? "theme-badge shadow-sm"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -337,7 +337,7 @@ export function DriveView({
               onClick={() => setViewMode("grid")}
               className={`rounded-lg p-1.5 transition-colors cursor-pointer ${
                 viewMode === "grid"
-                  ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                  ? "theme-badge"
                   : "text-slate-400 hover:text-white"
               }`}
               title="Vista Cuadrícula"
@@ -349,7 +349,7 @@ export function DriveView({
               onClick={() => setViewMode("list")}
               className={`rounded-lg p-1.5 transition-colors cursor-pointer ${
                 viewMode === "list"
-                  ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                  ? "theme-badge"
                   : "text-slate-400 hover:text-white"
               }`}
               title="Vista Lista"
@@ -362,9 +362,9 @@ export function DriveView({
 
       {/* Drag & Drop Visual Highlight */}
       {isDragOver && (
-        <div className="rounded-2xl border-2 border-dashed border-rose-500 bg-rose-500/10 p-8 text-center backdrop-blur-md animate-pulse flex items-center justify-center gap-2">
-          <IconDownload className="h-5 w-5 text-rose-400" />
-          <p className="text-sm font-bold text-rose-300">
+        <div className="rounded-2xl border-2 border-dashed border-[var(--ruby-primary)] bg-[var(--ruby-surface)] p-8 text-center backdrop-blur-md animate-pulse flex items-center justify-center gap-2">
+          <IconDownload className="h-5 w-5 theme-text" />
+          <p className="text-sm font-bold theme-text">
             Suelta los archivos aquí para subirlos a esta carpeta
           </p>
         </div>

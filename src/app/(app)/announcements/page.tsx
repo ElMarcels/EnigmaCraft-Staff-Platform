@@ -12,7 +12,7 @@ import { formatInTimezone } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 const PRIORITY_STYLE: Record<string, string> = {
-  alta: "border-rose-500/40 bg-rose-500/10 shadow-rose-950/20",
+  alta: "border-[var(--ruby-border)] bg-[var(--ruby-surface)] shadow-[0_0_24px_var(--ruby-glow-soft)]",
   normal: "",
   baja: "opacity-80",
 };
@@ -88,7 +88,7 @@ export default async function AnnouncementsPage() {
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-5xl mx-auto pb-28">
       <header className="flex items-center gap-3.5">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 shadow-sm">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl theme-icon-box shadow-sm">
           <IconMegaphone className="h-6 w-6" />
         </div>
         <div>
@@ -108,7 +108,7 @@ export default async function AnnouncementsPage() {
           className="glass-card p-6 space-y-4 shadow-xl shadow-black/40"
         >
           <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-rose-300">
+            <h2 className="text-sm font-bold uppercase tracking-wider theme-text">
               Publicar Nuevo Comunicado
             </h2>
             <span className="text-[11px] font-semibold text-slate-400">
@@ -253,7 +253,7 @@ export default async function AnnouncementsPage() {
 
                   <div className="flex items-center gap-2">
                     {a.priority === "alta" ? (
-                      <span className="rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase text-rose-300">
+                      <span className="rounded-full theme-badge px-2.5 py-0.5 text-[10px] font-bold uppercase">
                         Prioridad Alta
                       </span>
                     ) : null}

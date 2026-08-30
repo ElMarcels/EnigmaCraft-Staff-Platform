@@ -7,7 +7,7 @@
   --foreground-muted: #94a3b8;
   --foreground-subtle: #64748b;
 
-  /* Ruby / Crimson Accents (Default) */
+  /* Theme Accents (Default: Ruby) */
   --ruby-primary: #e11d48;
   --ruby-light: #fb7185;
   --ruby-glow: rgba(225, 29, 72, 0.45);
@@ -18,6 +18,15 @@
   --bg-glow-2: rgba(190, 18, 60, 0.12);
   --bg-glow-3: rgba(136, 19, 55, 0.10);
   --text-accent: #fb7185;
+
+  /* Aliases */
+  --theme-primary: var(--ruby-primary);
+  --theme-light: var(--ruby-light);
+  --theme-glow: var(--ruby-glow);
+  --theme-glow-soft: var(--ruby-glow-soft);
+  --theme-surface: var(--ruby-surface);
+  --theme-border: var(--ruby-border);
+  --theme-text: var(--text-accent);
 
   /* Glass Tokens */
   --glass-bg: rgba(255, 255, 255, 0.03);
@@ -85,12 +94,144 @@
   --text-accent: #fbbf24;
 }
 
+[data-theme="sakura"] {
+  --ruby-primary: #ec4899;
+  --ruby-light: #f472b6;
+  --ruby-glow: rgba(236, 72, 153, 0.5);
+  --ruby-glow-soft: rgba(236, 72, 153, 0.2);
+  --ruby-surface: rgba(236, 72, 153, 0.14);
+  --ruby-border: rgba(236, 72, 153, 0.4);
+  --bg-glow-1: rgba(236, 72, 153, 0.26);
+  --bg-glow-2: rgba(190, 24, 93, 0.16);
+  --bg-glow-3: rgba(131, 24, 67, 0.14);
+  --text-accent: #f472b6;
+}
+
+[data-theme="ocean"] {
+  --ruby-primary: #3b82f6;
+  --ruby-light: #60a5fa;
+  --ruby-glow: rgba(59, 130, 246, 0.5);
+  --ruby-glow-soft: rgba(59, 130, 246, 0.2);
+  --ruby-surface: rgba(59, 130, 246, 0.14);
+  --ruby-border: rgba(59, 130, 246, 0.4);
+  --bg-glow-1: rgba(59, 130, 246, 0.26);
+  --bg-glow-2: rgba(29, 78, 216, 0.16);
+  --bg-glow-3: rgba(30, 58, 138, 0.14);
+  --text-accent: #60a5fa;
+}
+
+[data-theme="lime"] {
+  --ruby-primary: #84cc16;
+  --ruby-light: #a3e635;
+  --ruby-glow: rgba(132, 204, 22, 0.5);
+  --ruby-glow-soft: rgba(132, 204, 22, 0.2);
+  --ruby-surface: rgba(132, 204, 22, 0.14);
+  --ruby-border: rgba(132, 204, 22, 0.4);
+  --bg-glow-1: rgba(132, 204, 22, 0.26);
+  --bg-glow-2: rgba(77, 124, 15, 0.16);
+  --bg-glow-3: rgba(54, 83, 20, 0.14);
+  --text-accent: #a3e635;
+}
+
+[data-theme="blood"] {
+  --ruby-primary: #dc2626;
+  --ruby-light: #ef4444;
+  --ruby-glow: rgba(220, 38, 38, 0.55);
+  --ruby-glow-soft: rgba(220, 38, 38, 0.22);
+  --ruby-surface: rgba(220, 38, 38, 0.15);
+  --ruby-border: rgba(220, 38, 38, 0.45);
+  --bg-glow-1: rgba(220, 38, 38, 0.28);
+  --bg-glow-2: rgba(153, 27, 27, 0.18);
+  --bg-glow-3: rgba(69, 10, 10, 0.14);
+  --text-accent: #ef4444;
+}
+
+[data-theme="void"] {
+  --ruby-primary: #6366f1;
+  --ruby-light: #818cf8;
+  --ruby-glow: rgba(99, 102, 241, 0.5);
+  --ruby-glow-soft: rgba(99, 102, 241, 0.2);
+  --ruby-surface: rgba(99, 102, 241, 0.14);
+  --ruby-border: rgba(99, 102, 241, 0.4);
+  --bg-glow-1: rgba(99, 102, 241, 0.26);
+  --bg-glow-2: rgba(67, 56, 202, 0.16);
+  --bg-glow-3: rgba(49, 46, 129, 0.14);
+  --text-accent: #818cf8;
+}
+
+[data-theme="sunset"] {
+  --ruby-primary: #f97316;
+  --ruby-light: #fb923c;
+  --ruby-glow: rgba(249, 115, 22, 0.5);
+  --ruby-glow-soft: rgba(249, 115, 22, 0.2);
+  --ruby-surface: rgba(249, 115, 22, 0.14);
+  --ruby-border: rgba(249, 115, 22, 0.4);
+  --bg-glow-1: rgba(249, 115, 22, 0.26);
+  --bg-glow-2: rgba(194, 65, 12, 0.16);
+  --bg-glow-3: rgba(124, 45, 18, 0.14);
+  --text-accent: #fb923c;
+}
+
+[data-theme="diamond"] {
+  --ruby-primary: #38bdf8;
+  --ruby-light: #7dd3fc;
+  --ruby-glow: rgba(56, 189, 248, 0.5);
+  --ruby-glow-soft: rgba(56, 189, 248, 0.2);
+  --ruby-surface: rgba(56, 189, 248, 0.14);
+  --ruby-border: rgba(56, 189, 248, 0.4);
+  --bg-glow-1: rgba(56, 189, 248, 0.26);
+  --bg-glow-2: rgba(3, 105, 161, 0.16);
+  --bg-glow-3: rgba(12, 74, 110, 0.14);
+  --text-accent: #7dd3fc;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-ruby: var(--ruby-primary);
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Universal Liquid Glass Theme Utilities */
+.theme-text {
+  color: var(--theme-light) !important;
+}
+
+.theme-link {
+  color: var(--theme-light) !important;
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+.theme-link:hover {
+  filter: brightness(1.2);
+  text-decoration: underline;
+}
+
+.theme-bg-surface {
+  background-color: var(--theme-surface) !important;
+}
+
+.theme-border {
+  border-color: var(--theme-border) !important;
+}
+
+.theme-badge {
+  background-color: var(--theme-surface) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-light) !important;
+}
+
+.theme-icon-box {
+  background-color: var(--theme-surface) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-light) !important;
+  box-shadow: 0 0 16px var(--theme-glow-soft) !important;
+}
+
+.theme-glow-card:hover {
+  border-color: var(--theme-border) !important;
+  box-shadow: 0 12px 32px -4px var(--theme-glow-soft) !important;
 }
 
 * {
