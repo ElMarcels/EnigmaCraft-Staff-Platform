@@ -140,6 +140,7 @@ export default async function FilesPage({
         createdAt: i.createdAt.toISOString(),
         ownerName: i.owner?.displayName || "—",
         ownerId: i.ownerId || "",
+        url: i.url,
       }));
     }
   } catch {

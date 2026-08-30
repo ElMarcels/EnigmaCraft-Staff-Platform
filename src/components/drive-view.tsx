@@ -12,6 +12,7 @@ import {
   createFolder,
   deleteFileOrFolder,
   renameFileOrFolder,
+  getFileContentAction,
 } from "@/actions/files";
 import {
   IconFolder,
@@ -37,6 +38,7 @@ export type DriveItemDTO = {
   createdAt: string;
   ownerName: string;
   ownerId: string | null;
+  url?: string | null;
 };
 
 function fmtBytes(n: number) {
@@ -49,61 +51,36 @@ function getFileIconStyle(name: string) {
   const ext = name.split(".").pop()?.toLowerCase();
   if (ext === "schem" || ext === "schematic" || ext === "nbt") {
     return {
+      type: "schematics",
       badge: "SCHEM",
       color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-      cardGradient: "from-emerald-500/15 to-teal-950/40",
-      glowColor: "rgba(16,185,129,0.3)",
-      label: "Esquemático Minecraft",
-      type: "schem",
     };
   }
-  if (ext === "jar") {
+  if (ext === "jar" || ext === "zip" || ext === "tar" || ext === "gz") {
     return {
-      badge: "JAR",
-      color: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-      cardGradient: "from-amber-500/15 to-yellow-950/40",
-      glowColor: "rgba(245,158,11,0.3)",
-      label: "Java Plugin Paper/Spigot",
-      type: "jar",
-    };
-  }
-  if (ext === "yml" || ext === "yaml" || ext === "json" || ext === "toml") {
-    return {
-      badge: "CFG",
-      color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
-      cardGradient: "from-cyan-500/15 to-blue-950/40",
-      glowColor: "rgba(6,182,212,0.3)",
-      label: "Configuración Servidor",
-      type: "config",
-    };
-  }
-  if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "webp") {
-    return {
-      badge: "IMG",
+      type: "plugins",
+      badge: "JAR/ZIP",
       color: "bg-rose-500/20 text-rose-300 border-rose-500/30",
-      cardGradient: "from-rose-500/15 to-red-950/40",
-      glowColor: "rgba(225,29,72,0.3)",
-      label: "Imagen / Banner",
-      type: "image",
     };
   }
-  if (ext === "zip" || ext === "rar" || ext === "gz") {
+  if (ext === "yml" || ext === "yaml" || ext === "json" || ext === "properties" || ext === "toml") {
     return {
-      badge: "ZIP",
-      color: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-      cardGradient: "from-purple-500/15 to-indigo-950/40",
-      glowColor: "rgba(168,85,247,0.3)",
-      label: "Comprimido",
-      type: "zip",
+      type: "configs",
+      badge: "CONFIG",
+      color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+    };
+  }
+  if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "gif" || ext === "webp") {
+    return {
+      type: "media",
+      badge: "IMG",
+      color: "bg-pink-500/20 text-pink-300 border-pink-500/30",
     };
   }
   return {
+    type: "others",
     badge: "DOC",
     color: "bg-slate-500/20 text-slate-300 border-slate-500/30",
-    cardGradient: "from-slate-500/15 to-slate-950/40",
-    glowColor: "rgba(148,163,184,0.3)",
-    label: "Documento",
-    type: "other",
   };
 }
 
@@ -135,52 +112,78 @@ export function DriveView({
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Modals for Local Folder Sync, Cloud Import and YAML Diff Editor
+  // Local Folder Sync Modal & GitHub / Drive Importer Modal & Config Diff Editor Modal
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [cloudModalOpen, setCloudModalOpen] = useState(false);
   const [editorModalOpen, setEditorModalOpen] = useState(false);
   const [editorFileName, setEditorFileName] = useState("config.yml");
-  const [editorContent, setEditorContent] = useState(
-    `# Configuración del Servidor EnigmaCraft Network\nserver-name: "EnigmaCraft Survival Custom"\nmax-players: 150\nview-distance: 12\n\nnetwork:\n  bungee-mode: true\n  redis-sync: true\n  packet-compression-threshold: 256\n\neconomy:\n  enabled: true\n  starting-balance: 500\n  currency-symbol: "⛁"\n\nsecurity:\n  anti-vpn: true\n  rate-limit-cps: 20\n  two-factor-staff: true\n`
-  );
+  const [editorContent, setEditorContent] = useState("");
 
-  function openFileEditor(name: string, sampleContent?: string) {
+  function loadDefaultTemplate(name: string) {
+    const ext = name.split(".").pop()?.toLowerCase();
+    if (ext === "yml" || ext === "yaml") {
+      setEditorContent(
+        `# Configuración: ${name}\n# EnigmaCraft Network Platform\nversion: "1.21.4"\nenabled: true\nsettings:\n  debug-mode: false\n  cache-ttl-seconds: 3600\n  auto-save: true\n\nmessages:\n  prefix: "&c[EnigmaCraft]&r "\n  success: "&aConfiguración cargada correctamente."\n  error: "&cError al procesar el comando."\n`
+      );
+    } else if (ext === "json") {
+      setEditorContent(
+        JSON.stringify(
+          {
+            name: name,
+            server: "EnigmaCraft Survival Custom",
+            environment: "production",
+            maxConnections: 150,
+            features: { autoBackup: true, antiLag: true },
+          },
+          null,
+          2
+        )
+      );
+    } else if (ext === "properties") {
+      setEditorContent(
+        `# Minecraft server properties\n# ${name}\nserver-port=25565\nmotd=§c§lEnigmaCraft §8| §7Staff Network 1.21.x\nonline-mode=true\nmax-players=150\npvp=true\ndifficulty=hard\n`
+      );
+    } else if (ext === "schem" || ext === "schematic") {
+      setEditorContent(
+        `# Metadatos del Esquemático de WorldEdit (.schem)\nname: "${name}"\nformat: "Sponge V2 / FastAsyncWorldEdit"\ndimensions:\n  width_x: 64\n  height_y: 48\n  length_z: 64\nblocks_count: 196608\npaste_offset: [0, 0, 0]\n`
+      );
+    } else {
+      setEditorContent(`# Archivo: ${name}\n# EnigmaCraft Staff Cloud Storage\n\n`);
+    }
+  }
+
+  async function openFileEditor(itemOrName: DriveItemDTO | string, sampleContent?: string) {
     sounds.playPop();
+    const name = typeof itemOrName === "string" ? itemOrName : itemOrName.name;
+    const fileId = typeof itemOrName === "string" ? null : itemOrName.id;
+    const directUrl = typeof itemOrName === "string" ? null : itemOrName.url;
+
     setEditorFileName(name);
+
     if (sampleContent) {
       setEditorContent(sampleContent);
-    } else {
-      const ext = name.split(".").pop()?.toLowerCase();
-      if (ext === "yml" || ext === "yaml") {
-        setEditorContent(
-          `# Configuración: ${name}\n# EnigmaCraft Network Platform\nversion: "1.21.4"\nenabled: true\nsettings:\n  debug-mode: false\n  cache-ttl-seconds: 3600\n  auto-save: true\n\nmessages:\n  prefix: "&c[EnigmaCraft]&r "\n  success: "&aConfiguración cargada correctamente."\n  error: "&cError al procesar el comando."\n`
-        );
-      } else if (ext === "json") {
-        setEditorContent(
-          JSON.stringify(
-            {
-              name: name,
-              server: "EnigmaCraft Survival Custom",
-              environment: "production",
-              maxConnections: 150,
-              features: { autoBackup: true, antiLag: true },
-            },
-            null,
-            2
-          )
-        );
-      } else if (ext === "properties") {
-        setEditorContent(
-          `# Minecraft server properties\n# ${name}\nserver-port=25565\nmotd=§c§lEnigmaCraft §8| §7Staff Network 1.21.x\nonline-mode=true\nmax-players=150\npvp=true\ndifficulty=hard\n`
-        );
-      } else if (ext === "schem" || ext === "schematic") {
-        setEditorContent(
-          `# Metadatos del Esquemático de WorldEdit (.schem)\nname: "${name}"\nformat: "Sponge V2 / FastAsyncWorldEdit"\ndimensions:\n  width_x: 64\n  height_y: 48\n  length_z: 64\nblocks_count: 196608\npaste_offset: [0, 0, 0]\n`
-        );
-      } else {
-        setEditorContent(`# Archivo: ${name}\n# EnigmaCraft Staff Cloud Storage\n\n`);
+    } else if (directUrl && directUrl.startsWith("data:text/plain;charset=utf-8;base64,")) {
+      try {
+        const decoded = atob(directUrl.replace("data:text/plain;charset=utf-8;base64,", ""));
+        setEditorContent(decoded);
+      } catch {
+        loadDefaultTemplate(name);
       }
+    } else if (fileId) {
+      try {
+        const realContent = await getFileContentAction(fileId);
+        if (realContent !== null && realContent !== undefined) {
+          setEditorContent(realContent);
+        } else {
+          loadDefaultTemplate(name);
+        }
+      } catch {
+        loadDefaultTemplate(name);
+      }
+    } else {
+      loadDefaultTemplate(name);
     }
+
     setEditorModalOpen(true);
   }
 
@@ -630,7 +633,7 @@ export function DriveView({
                   <div>
                     <button
                       type="button"
-                      onClick={() => openFileEditor(item.name)}
+                      onClick={() => openFileEditor(item)}
                       className="text-left font-bold text-white tracking-tight truncate group-hover:text-rose-300 transition-colors cursor-pointer block max-w-full"
                       title={`Abrir ${item.name} en el editor`}
                     >
@@ -663,7 +666,7 @@ export function DriveView({
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => openFileEditor(item.name)}
+                      onClick={() => openFileEditor(item)}
                       className="rounded-lg p-1.5 text-slate-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-colors cursor-pointer"
                       title="Ver / Editar en Editor YAML"
                     >
@@ -749,7 +752,14 @@ export function DriveView({
                       <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase ${fileStyle?.color}`}>
                         {fileStyle?.badge}
                       </span>
-                      <span className="truncate text-sm font-medium text-slate-200">{item.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => openFileEditor(item)}
+                        className="truncate text-sm font-medium text-slate-200 hover:text-[var(--ruby-light)] transition-colors text-left cursor-pointer"
+                        title={`Abrir ${item.name} en el editor`}
+                      >
+                        {item.name}
+                      </button>
                     </div>
                   )}
 

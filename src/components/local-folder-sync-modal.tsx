@@ -144,21 +144,36 @@ export function LocalFolderSyncModal({
     });
   }
 
-  // Batch Sync execution (Push to cloud DB and Drive)
+  // Batch Sync execution (Push to cloud DB and Drive with REAL file content)
   async function startBatchSync() {
     if (localFiles.length === 0 || !folderName) return;
     setSyncing(true);
     setSyncProgress(20);
     sounds.playPop();
 
-    const dtos = localFiles.map((f) => ({
-      name: f.name,
-      relativePath: f.relativePath,
-      size: f.size,
-    }));
-
     try {
-      setSyncProgress(50);
+      // Read real text content for each file from user's filesystem
+      const dtos = await Promise.all(
+        localFiles.map(async (f, idx) => {
+          let content: string | undefined = undefined;
+          if (f.fileObject && f.size < 5 * 1024 * 1024) {
+            try {
+              content = await f.fileObject.text();
+            } catch {
+              // Non-text binary fallback
+            }
+          }
+          setSyncProgress(20 + Math.floor(((idx + 1) / localFiles.length) * 40));
+          return {
+            name: f.name,
+            relativePath: f.relativePath,
+            size: f.size,
+            content,
+          };
+        })
+      );
+
+      setSyncProgress(70);
       const res = await syncLocalDirectoryAction(folderName, dtos, parentId);
       setSyncProgress(100);
 

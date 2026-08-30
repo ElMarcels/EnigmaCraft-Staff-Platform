@@ -109,6 +109,7 @@ export type SyncedFileDTO = {
   relativePath: string;
   size: number;
   isFolder?: boolean;
+  content?: string;
 };
 
 export async function syncLocalDirectoryAction(
@@ -230,10 +231,17 @@ export async function syncLocalDirectoryAction(
       },
     });
 
+    const contentPayload = f.content
+      ? `data:text/plain;charset=utf-8;base64,${Buffer.from(f.content).toString("base64")}`
+      : null;
+
     if (existingFile) {
       await prisma.fileNode.update({
         where: { id: existingFile.id },
-        data: { size: Math.floor(f.size || 0) },
+        data: {
+          size: Math.floor(f.size || 0),
+          ...(contentPayload ? { url: contentPayload } : {}),
+        },
       });
     } else {
       await prisma.fileNode.create({
@@ -243,6 +251,7 @@ export async function syncLocalDirectoryAction(
           size: Math.floor(f.size || 0),
           parentId: targetParentId,
           ownerId: user.id,
+          url: contentPayload,
         },
       });
     }
@@ -267,6 +276,8 @@ export async function saveFileContentAction(
 ) {
   const user = await getCurrentUserOrThrow();
   const cleanName = sanitize(fileName);
+  const contentPayload = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString("base64")}`;
+  const size = Buffer.byteLength(content, "utf-8");
 
   const existing = await prisma.fileNode.findFirst({
     where: {
@@ -276,12 +287,10 @@ export async function saveFileContentAction(
     },
   });
 
-  const size = Buffer.byteLength(content, "utf-8");
-
   if (existing) {
     await prisma.fileNode.update({
       where: { id: existing.id },
-      data: { size },
+      data: { size, url: contentPayload },
     });
   } else {
     await prisma.fileNode.create({
@@ -291,10 +300,36 @@ export async function saveFileContentAction(
         size,
         parentId: parentId || null,
         ownerId: user.id,
+        url: contentPayload,
       },
     });
   }
 
+  await audit({
+    userId: user.id,
+    action: "FILE_EDIT",
+    targetType: "FileNode",
+    targetId: cleanName,
+    details: `Editado archivo ${cleanName} (${size} bytes)`,
+  });
+
   revalidatePath("/files");
   return { success: true };
+}
+
+export async function getFileContentAction(fileId: string) {
+  const node = await prisma.fileNode.findUnique({
+    where: { id: fileId },
+  });
+  if (!node || node.isFolder) return null;
+
+  if (node.url && node.url.startsWith("data:text/plain;charset=utf-8;base64,")) {
+    const b64 = node.url.replace("data:text/plain;charset=utf-8;base64,", "");
+    try {
+      return Buffer.from(b64, "base64").toString("utf-8");
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
