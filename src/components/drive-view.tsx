@@ -13,6 +13,7 @@ import {
   deleteFileOrFolder,
   renameFileOrFolder,
   getFileContentAction,
+  syncLocalDirectoryAction,
 } from "@/actions/files";
 import {
   IconFolder,
@@ -219,28 +220,44 @@ export function DriveView({
 
     try {
       const all = Array.from(files);
-      for (const file of all) {
-        const signRes = await fetch("/api/files", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      const TEXT_EXTS = [
+        "yml", "yaml", "json", "properties", "txt", "md", "schem",
+        "toml", "xml", "csv", "tsv", "ini", "conf", "log"
+      ];
+
+      const dtos = await Promise.all(
+        all.map(async (file) => {
+          let content: string | undefined = undefined;
+          const ext = file.name.split(".").pop()?.toLowerCase() || "";
+          if (TEXT_EXTS.includes(ext) && file.size < 250 * 1024) {
+            try {
+              content = await file.text();
+            } catch {}
+          }
+          return {
             name: file.name,
+            relativePath: file.name,
             size: file.size,
-            parentId: folderId,
-          }),
-        });
-        if (!signRes.ok) {
-          const j = await signRes.json().catch(() => null);
-          toast.error(j?.error || "Error al preparar la subida.", { id: toastId });
-          return;
-        }
+            content,
+            isFolder: false,
+          };
+        })
+      );
+
+      const targetFolderName =
+        breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : "Raíz";
+
+      const res = await syncLocalDirectoryAction(targetFolderName, dtos, folderId);
+      if (!res.success) {
+        throw new Error(res.error || "Error al subir los archivos.");
       }
 
       sounds.playSuccess();
-      toast.success("Archivos subidos correctamente", { id: toastId });
+      toast.success(`${all.length} archivo(s) subido(s) correctamente`, { id: toastId });
       router.refresh();
-    } catch {
-      toast.error("Error al subir los archivos.", { id: toastId });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al subir los archivos.";
+      toast.error(msg, { id: toastId });
     } finally {
       setUploading(false);
     }
