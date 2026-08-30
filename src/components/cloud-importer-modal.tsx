@@ -139,7 +139,7 @@ export function CloudImporterModal({
     // Parse each line (supports 'carpeta/', 'carpeta/subcarpeta/archivo.yml', 'doc.docx')
     const realFiles = rawLines.map((line) => {
       const cleanPath = line.replace(/\\/g, "/");
-      const isExplicitFolder = cleanPath.endsWith("/") || !cleanPath.includes(".");
+      const isExplicitFolder = cleanPath.endsWith("/");
       const name = cleanPath.replace(/\/+$/, "").split("/").pop() || cleanPath;
       const ext = name.split(".").pop()?.toLowerCase() || "";
 

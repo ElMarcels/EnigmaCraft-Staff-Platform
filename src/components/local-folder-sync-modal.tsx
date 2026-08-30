@@ -144,37 +144,53 @@ export function LocalFolderSyncModal({
     });
   }
 
-  // Batch Sync execution (Push to cloud DB and Drive with REAL file content)
+  // Batch Sync execution (Push to cloud DB and Drive with chunked payload safety)
   async function startBatchSync() {
     if (localFiles.length === 0 || !folderName) return;
     setSyncing(true);
-    setSyncProgress(20);
+    setSyncProgress(10);
     sounds.playPop();
 
     try {
-      // Read real text content for each file from user's filesystem
+      const TEXT_EXTS = [
+        "yml", "yaml", "json", "properties", "txt", "md", "schem",
+        "toml", "xml", "csv", "tsv", "ini", "conf", "log"
+      ];
+
+      // Read text content only for text-based configs to keep payload ultra-fast and lightweight
       const dtos = await Promise.all(
-        localFiles.map(async (f, idx) => {
+        localFiles.map(async (f) => {
           let content: string | undefined = undefined;
-          if (f.fileObject && f.size < 5 * 1024 * 1024) {
+          const ext = f.name.split(".").pop()?.toLowerCase() || "";
+          if (f.fileObject && TEXT_EXTS.includes(ext) && f.size < 250 * 1024) {
             try {
               content = await f.fileObject.text();
-            } catch {
-              // Non-text binary fallback
-            }
+            } catch {}
           }
-          setSyncProgress(20 + Math.floor(((idx + 1) / localFiles.length) * 40));
           return {
             name: f.name,
             relativePath: f.relativePath,
             size: f.size,
             content,
+            isFolder: false,
           };
         })
       );
 
-      setSyncProgress(70);
-      const res = await syncLocalDirectoryAction(folderName, dtos, parentId);
+      // Process in chunks of 25 files for maximum network and database reliability
+      const chunkSize = 25;
+      let totalSynced = 0;
+
+      for (let i = 0; i < dtos.length; i += chunkSize) {
+        const chunk = dtos.slice(i, i + chunkSize);
+        const chunkRes = await syncLocalDirectoryAction(folderName, chunk, parentId);
+        if (!chunkRes.success) {
+          throw new Error(chunkRes.error || "Error al sincronizar lote de archivos.");
+        }
+        totalSynced += chunkRes.count || chunk.length;
+        setSyncProgress(Math.min(95, Math.floor(((i + chunk.length) / dtos.length) * 100)));
+      }
+
       setSyncProgress(100);
 
       // Mark all as synced
@@ -188,18 +204,19 @@ export function LocalFolderSyncModal({
       setSyncing(false);
       sounds.playSuccess();
       toast.success(`¡Carpeta "${folderName}" sincronizada en el Drive!`, {
-        description: `Se han transferido y registrado ${res.count} archivos en la base de datos de EnigmaCraft.`,
+        description: `Se han transferido y registrado ${totalSynced} archivos en la base de datos de EnigmaCraft.`,
       });
 
       if (onSyncComplete) {
-        onSyncComplete(res.count);
+        onSyncComplete(totalSynced);
       }
       setTimeout(() => {
         onClose();
-      }, 1000);
-    } catch {
+      }, 800);
+    } catch (err: unknown) {
       setSyncing(false);
-      toast.error("Error al sincronizar con el almacenamiento.");
+      const msg = err instanceof Error ? err.message : "Error al sincronizar con el almacenamiento.";
+      toast.error(msg);
     }
   }
 

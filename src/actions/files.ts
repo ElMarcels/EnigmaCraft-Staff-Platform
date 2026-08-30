@@ -117,156 +117,153 @@ export async function syncLocalDirectoryAction(
   files: SyncedFileDTO[],
   parentId?: string | null
 ) {
-  const user = await getCurrentUserOrThrow();
-  const cleanFolderName = sanitize(folderName || "Carpeta Sincronizada");
+  try {
+    const user = await getCurrentUserOrThrow();
+    const cleanFolderName = sanitize(folderName || "Carpeta Sincronizada");
 
-  // Create root synced folder
-  let rootFolder = await prisma.fileNode.findFirst({
-    where: {
-      name: cleanFolderName,
-      isFolder: true,
-      parentId: parentId || null,
-    },
-  });
-
-  if (!rootFolder) {
-    rootFolder = await prisma.fileNode.create({
-      data: {
+    // Create root synced folder
+    let rootFolder = await prisma.fileNode.findFirst({
+      where: {
         name: cleanFolderName,
         isFolder: true,
         parentId: parentId || null,
-        ownerId: user.id,
       },
     });
-  }
 
-  // Helper to ensure nested subfolder path exists
-  async function ensureFolderPath(
-    pathParts: string[],
-    parentFolderId: string
-  ): Promise<string> {
-    let currentParentId = parentFolderId;
-
-    for (const folderName of pathParts) {
-      const cleanSubName = sanitize(folderName);
-      let subFolder = await prisma.fileNode.findFirst({
-        where: {
-          name: cleanSubName,
+    if (!rootFolder) {
+      rootFolder = await prisma.fileNode.create({
+        data: {
+          name: cleanFolderName,
           isFolder: true,
-          parentId: currentParentId,
+          parentId: parentId || null,
+          ownerId: user.id,
         },
       });
+    }
 
-      if (!subFolder) {
-        // If a non-folder file with same name exists by accident, delete it first to avoid collision
-        const accidentFile = await prisma.fileNode.findFirst({
+    // Helper to ensure nested subfolder path exists
+    async function ensureFolderPath(
+      pathParts: string[],
+      parentFolderId: string
+    ): Promise<string> {
+      let currentParentId = parentFolderId;
+
+      for (const folderName of pathParts) {
+        const cleanSubName = sanitize(folderName);
+        let subFolder = await prisma.fileNode.findFirst({
           where: {
-            name: cleanSubName,
-            isFolder: false,
-            parentId: currentParentId,
-          },
-        });
-        if (accidentFile) {
-          await prisma.fileNode.delete({ where: { id: accidentFile.id } });
-        }
-
-        subFolder = await prisma.fileNode.create({
-          data: {
             name: cleanSubName,
             isFolder: true,
             parentId: currentParentId,
+          },
+        });
+
+        if (!subFolder) {
+          subFolder = await prisma.fileNode.create({
+            data: {
+              name: cleanSubName,
+              isFolder: true,
+              parentId: currentParentId,
+              ownerId: user.id,
+            },
+          });
+        }
+
+        currentParentId = subFolder.id;
+      }
+
+      return currentParentId;
+    }
+
+    let count = 0;
+
+    // Create files and nested subfolders
+    for (const f of files) {
+      const rawPath = f.relativePath.replace(/\\/g, "/");
+
+      // If it is explicitly a folder or ends with a slash
+      if (f.isFolder || rawPath.endsWith("/")) {
+        const folderSegments = rawPath.replace(/\/+$/, "").split("/").filter(Boolean);
+        if (
+          folderSegments.length > 0 &&
+          folderSegments[0].toLowerCase() === cleanFolderName.toLowerCase()
+        ) {
+          folderSegments.shift();
+        }
+        if (folderSegments.length > 0) {
+          await ensureFolderPath(folderSegments, rootFolder.id);
+          count++;
+        }
+        continue;
+      }
+
+      const segments = rawPath.split("/").filter(Boolean);
+
+      // If relative path begins with the root folder name, shift it
+      if (segments.length > 1 && segments[0].toLowerCase() === cleanFolderName.toLowerCase()) {
+        segments.shift();
+      }
+
+      const fileName = segments.pop() || f.name;
+      const subfolderSegments = segments;
+
+      // Resolve exact parent folder (root or nested subfolder)
+      const targetParentId =
+        subfolderSegments.length > 0
+          ? await ensureFolderPath(subfolderSegments, rootFolder.id)
+          : rootFolder.id;
+
+      const cleanName = sanitize(fileName);
+
+      const existingFile = await prisma.fileNode.findFirst({
+        where: {
+          name: cleanName,
+          parentId: targetParentId,
+          isFolder: false,
+        },
+      });
+
+      const contentPayload = f.content
+        ? `data:text/plain;charset=utf-8;base64,${Buffer.from(f.content).toString("base64")}`
+        : null;
+
+      if (existingFile) {
+        await prisma.fileNode.update({
+          where: { id: existingFile.id },
+          data: {
+            size: Math.floor(f.size || 0),
+            ...(contentPayload ? { url: contentPayload } : {}),
+          },
+        });
+      } else {
+        await prisma.fileNode.create({
+          data: {
+            name: cleanName,
+            isFolder: false,
+            size: Math.floor(f.size || 0),
+            parentId: targetParentId,
             ownerId: user.id,
+            url: contentPayload,
           },
         });
       }
-
-      currentParentId = subFolder.id;
+      count++;
     }
 
-    return currentParentId;
-  }
-
-  // Create files and nested subfolders
-  for (const f of files) {
-    const rawPath = f.relativePath.replace(/\\/g, "/");
-
-    // If it is explicitly a folder or ends with a slash
-    if (f.isFolder || rawPath.endsWith("/")) {
-      const folderSegments = rawPath.replace(/\/+$/, "").split("/").filter(Boolean);
-      if (
-        folderSegments.length > 0 &&
-        folderSegments[0].toLowerCase() === cleanFolderName.toLowerCase()
-      ) {
-        folderSegments.shift();
-      }
-      if (folderSegments.length > 0) {
-        await ensureFolderPath(folderSegments, rootFolder.id);
-      }
-      continue;
-    }
-
-    const segments = rawPath.split("/").filter(Boolean);
-
-    // If relative path begins with the root folder name, shift it
-    if (segments.length > 1 && segments[0].toLowerCase() === cleanFolderName.toLowerCase()) {
-      segments.shift();
-    }
-
-    const fileName = segments.pop() || f.name;
-    const subfolderSegments = segments;
-
-    // Resolve exact parent folder (root or nested subfolder)
-    const targetParentId =
-      subfolderSegments.length > 0
-        ? await ensureFolderPath(subfolderSegments, rootFolder.id)
-        : rootFolder.id;
-
-    const cleanName = sanitize(fileName);
-
-    const existingFile = await prisma.fileNode.findFirst({
-      where: {
-        name: cleanName,
-        parentId: targetParentId,
-        isFolder: false,
-      },
+    await audit({
+      userId: user.id,
+      action: "FOLDER_SYNC",
+      targetType: "FileNode",
+      targetId: rootFolder.id,
+      details: `${cleanFolderName} (${count} elementos sincronizados)`,
     });
 
-    const contentPayload = f.content
-      ? `data:text/plain;charset=utf-8;base64,${Buffer.from(f.content).toString("base64")}`
-      : null;
-
-    if (existingFile) {
-      await prisma.fileNode.update({
-        where: { id: existingFile.id },
-        data: {
-          size: Math.floor(f.size || 0),
-          ...(contentPayload ? { url: contentPayload } : {}),
-        },
-      });
-    } else {
-      await prisma.fileNode.create({
-        data: {
-          name: cleanName,
-          isFolder: false,
-          size: Math.floor(f.size || 0),
-          parentId: targetParentId,
-          ownerId: user.id,
-          url: contentPayload,
-        },
-      });
-    }
+    revalidatePath("/files");
+    return { success: true, folderId: rootFolder.id, count };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Error al sincronizar con el almacenamiento.";
+    return { success: false, error: errorMsg, count: 0 };
   }
-
-  await audit({
-    userId: user.id,
-    action: "FOLDER_SYNC",
-    targetType: "FileNode",
-    targetId: rootFolder.id,
-    details: `${cleanFolderName} (${files.length} archivos con estructura de subcarpetas)`,
-  });
-
-  revalidatePath("/files");
-  return { success: true, folderId: rootFolder.id, count: files.length };
 }
 
 export async function saveFileContentAction(
