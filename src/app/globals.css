@@ -198,13 +198,13 @@ body {
     transform: scale(0.94);
   }
 
-  /* Active Morphing Pill with Ruby Glow */
+  /* Active Morphing Pill with Theme Glow */
   .pill-dock-item-active {
     color: #ffffff;
-    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 55%, #be123c 100%);
-    box-shadow: 0 4px 18px rgba(225, 29, 72, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    background: linear-gradient(135deg, var(--ruby-light) 0%, var(--ruby-primary) 100%);
+    box-shadow: 0 4px 20px var(--ruby-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     padding: 0 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.25);
   }
 
   /* Dynamic Typewriter / Reveal Label Animation */
@@ -268,9 +268,9 @@ body {
     .glass-card-interactive:hover {
       transform: translateY(-2px);
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
-      border-color: rgba(244, 63, 94, 0.35);
+      border-color: var(--ruby-border);
       border-top-color: rgba(255, 255, 255, 0.28);
-      box-shadow: 0 16px 40px -8px rgba(225, 29, 72, 0.18), 0 0 20px -2px rgba(225, 29, 72, 0.1);
+      box-shadow: 0 16px 40px -8px var(--ruby-glow-soft), 0 0 20px -2px var(--ruby-glow-soft);
     }
   }
 
@@ -286,13 +286,13 @@ body {
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   }
 
-  /* Crimson / Ruby Primary Button with Tactile Feedback */
+  /* Primary Button with Tactile Feedback & Dynamic Theme Accent */
   .btn-primary {
     @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-white shadow-lg overflow-hidden cursor-pointer select-none;
-    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 60%, #be123c 100%);
+    background: linear-gradient(135deg, var(--ruby-light) 0%, var(--ruby-primary) 100%);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-top: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 4px 18px rgba(225, 29, 72, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 18px var(--ruby-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     padding: 0.55rem 1.15rem;
     font-size: 0.875rem;
     transition: transform 160ms var(--ease-out), filter 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
@@ -300,8 +300,8 @@ body {
 
   @media (hover: hover) and (pointer: fine) {
     .btn-primary:hover {
-      filter: brightness(1.08);
-      box-shadow: 0 6px 24px rgba(225, 29, 72, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      filter: brightness(1.12);
+      box-shadow: 0 6px 24px var(--ruby-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
   }
 
@@ -318,11 +318,9 @@ body {
 
   /* Glass Secondary Button */
   .btn-secondary {
-    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-white cursor-pointer select-none;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-slate-200 cursor-pointer select-none;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
     padding: 0.55rem 1.15rem;
     font-size: 0.875rem;
     transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
@@ -375,8 +373,8 @@ body {
 
   .input:focus {
     background: rgba(255, 255, 255, 0.06);
-    border-color: #f43f5e;
-    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.18), 0 0 16px -2px rgba(225, 29, 72, 0.25);
+    border-color: var(--ruby-primary);
+    box-shadow: 0 0 0 3px var(--ruby-surface), 0 0 16px -2px var(--ruby-glow);
   }
 
   select.input option {

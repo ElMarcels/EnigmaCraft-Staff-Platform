@@ -13,6 +13,9 @@ type ThemeOption = {
   gradient: string;
   glowColor: string;
   primary: string;
+  borderColor: string;
+  badgeBg: string;
+  badgeText: string;
 };
 
 const THEMES: ThemeOption[] = [
@@ -23,6 +26,9 @@ const THEMES: ThemeOption[] = [
     gradient: "from-rose-500 to-red-700",
     glowColor: "rgba(225, 29, 72, 0.4)",
     primary: "#f43f5e",
+    borderColor: "rgba(244, 63, 94, 0.8)",
+    badgeBg: "rgba(225, 29, 72, 0.2)",
+    badgeText: "#fda4af",
   },
   {
     key: "amethyst",
@@ -31,6 +37,9 @@ const THEMES: ThemeOption[] = [
     gradient: "from-purple-500 to-indigo-600",
     glowColor: "rgba(168, 85, 247, 0.4)",
     primary: "#a855f7",
+    borderColor: "rgba(168, 85, 247, 0.8)",
+    badgeBg: "rgba(168, 85, 247, 0.2)",
+    badgeText: "#d8b4fe",
   },
   {
     key: "emerald",
@@ -39,6 +48,9 @@ const THEMES: ThemeOption[] = [
     gradient: "from-emerald-400 to-teal-600",
     glowColor: "rgba(16, 185, 129, 0.4)",
     primary: "#10b981",
+    borderColor: "rgba(16, 185, 129, 0.8)",
+    badgeBg: "rgba(16, 185, 129, 0.2)",
+    badgeText: "#6ee7b7",
   },
   {
     key: "cyan",
@@ -47,6 +59,9 @@ const THEMES: ThemeOption[] = [
     gradient: "from-cyan-400 to-blue-600",
     glowColor: "rgba(6, 182, 212, 0.4)",
     primary: "#06b6d4",
+    borderColor: "rgba(6, 182, 212, 0.8)",
+    badgeBg: "rgba(6, 182, 212, 0.2)",
+    badgeText: "#67e8f9",
   },
   {
     key: "amber",
@@ -55,6 +70,9 @@ const THEMES: ThemeOption[] = [
     gradient: "from-amber-400 to-yellow-600",
     glowColor: "rgba(245, 158, 11, 0.4)",
     primary: "#f59e0b",
+    borderColor: "rgba(245, 158, 11, 0.8)",
+    badgeBg: "rgba(245, 158, 11, 0.2)",
+    badgeText: "#fde68a",
   },
 ];
 
@@ -65,7 +83,13 @@ export function ThemeAccentPicker() {
     const saved = localStorage.getItem("ec-theme-accent") as ThemeKey | null;
     if (saved && THEMES.some((t) => t.key === saved)) {
       setCurrentTheme(saved);
-      document.documentElement.setAttribute("data-theme", saved);
+      if (saved === "ruby") {
+        document.documentElement.removeAttribute("data-theme");
+        document.body.removeAttribute("data-theme");
+      } else {
+        document.documentElement.setAttribute("data-theme", saved);
+        document.body.setAttribute("data-theme", saved);
+      }
     }
   }, []);
 
@@ -74,11 +98,13 @@ export function ThemeAccentPicker() {
     localStorage.setItem("ec-theme-accent", key);
     if (key === "ruby") {
       document.documentElement.removeAttribute("data-theme");
+      document.body.removeAttribute("data-theme");
     } else {
       document.documentElement.setAttribute("data-theme", key);
+      document.body.setAttribute("data-theme", key);
     }
     toast.success(`Acento cambiado a ${name}`, {
-      description: "El nuevo esquema de color y resplandor se ha guardado.",
+      description: "El nuevo esquema de color y resplandor se ha aplicado en toda la plataforma.",
     });
   }
 
@@ -92,9 +118,17 @@ export function ThemeAccentPicker() {
               key={theme.key}
               type="button"
               onClick={() => selectTheme(theme.key, theme.name)}
+              style={
+                isSelected
+                  ? {
+                      borderColor: theme.borderColor,
+                      boxShadow: `0 0 24px -4px ${theme.glowColor}`,
+                    }
+                  : undefined
+              }
               className={`p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer relative overflow-hidden select-none group ${
                 isSelected
-                  ? "border-rose-500/80 bg-white/[0.06] shadow-lg shadow-rose-950/40"
+                  ? "bg-white/[0.07]"
                   : "border-white/[0.08] bg-white/[0.025] hover:border-white/[0.2] hover:bg-white/[0.05]"
               }`}
             >
@@ -120,7 +154,14 @@ export function ThemeAccentPicker() {
                   </div>
                 </div>
                 {isSelected ? (
-                  <span className="rounded-md bg-rose-500/20 border border-rose-500/40 px-2 py-0.5 text-[10px] font-bold text-rose-300 uppercase">
+                  <span
+                    style={{
+                      backgroundColor: theme.badgeBg,
+                      borderColor: theme.borderColor,
+                      color: theme.badgeText,
+                    }}
+                    className="rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                  >
                     Activo
                   </span>
                 ) : null}

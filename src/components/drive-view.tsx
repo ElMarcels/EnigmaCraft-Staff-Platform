@@ -202,7 +202,7 @@ export function DriveView({
     setTimeout(() => setCopiedId(null), 2000);
   }
 
-  const parentId = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2].id : null;
+  const parentId = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2].id : (folderId ? "" : null);
 
   return (
     <div

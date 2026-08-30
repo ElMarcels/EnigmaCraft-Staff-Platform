@@ -4,7 +4,17 @@ import { DriveView } from "@/components/drive-view";
 
 export const dynamic = "force-dynamic";
 
-const DEMO_ITEMS = [
+const ROOT_DEMO_ITEMS = [
+  {
+    id: "folder-demo-1",
+    name: "Esquematicos & Mapas",
+    isFolder: true,
+    size: 0,
+    mimeType: "inode/directory",
+    createdAt: new Date("2026-08-20T12:00:00Z").toISOString(),
+    ownerName: "ElenaBuilder",
+    ownerId: "4",
+  },
   {
     id: "file-demo-1",
     name: "Lobby_Halloween_2026.schem",
@@ -45,17 +55,45 @@ const DEMO_ITEMS = [
     ownerName: "LucasMod",
     ownerId: "3",
   },
-  {
-    id: "folder-demo-1",
-    name: "Esquematicos & Mapas",
-    isFolder: true,
-    size: 0,
-    mimeType: "inode/directory",
-    createdAt: new Date("2026-08-20T12:00:00Z").toISOString(),
-    ownerName: "ElenaBuilder",
-    ownerId: "4",
-  },
 ];
+
+const FOLDER_CONTENTS: Record<string, { name: string; items: typeof ROOT_DEMO_ITEMS }> = {
+  "folder-demo-1": {
+    name: "Esquematicos & Mapas",
+    items: [
+      {
+        id: "file-sub-1",
+        name: "Spawn_Lobby_Principal_V5.schem",
+        isFolder: false,
+        size: 8945120,
+        mimeType: "application/octet-stream",
+        createdAt: new Date("2026-08-26T11:00:00Z").toISOString(),
+        ownerName: "ElenaBuilder",
+        ownerId: "4",
+      },
+      {
+        id: "file-sub-2",
+        name: "Isla_Skyblock_Nether.schem",
+        isFolder: false,
+        size: 3412900,
+        mimeType: "application/octet-stream",
+        createdAt: new Date("2026-08-27T15:40:00Z").toISOString(),
+        ownerName: "ElenaBuilder",
+        ownerId: "4",
+      },
+      {
+        id: "file-sub-3",
+        name: "Mundo_Survival_Spawn.schem",
+        isFolder: false,
+        size: 14205800,
+        mimeType: "application/octet-stream",
+        createdAt: new Date("2026-08-28T18:20:00Z").toISOString(),
+        ownerName: "ElenaBuilder",
+        ownerId: "4",
+      },
+    ],
+  },
+};
 
 export default async function FilesPage({
   searchParams,
@@ -65,9 +103,9 @@ export default async function FilesPage({
   const { folder } = await searchParams;
   const user = await getCurrentUser();
 
-  let items = DEMO_ITEMS;
-  let path: { id: string; name: string }[] = [];
   const rootId: string | null = folder || null;
+  let items = rootId && FOLDER_CONTENTS[rootId] ? FOLDER_CONTENTS[rootId].items : (rootId ? [] : ROOT_DEMO_ITEMS);
+  let path: { id: string; name: string }[] = rootId && FOLDER_CONTENTS[rootId] ? [{ id: rootId, name: FOLDER_CONTENTS[rootId].name }] : [];
 
   try {
     if (rootId) {

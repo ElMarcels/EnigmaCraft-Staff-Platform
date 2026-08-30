@@ -27,6 +27,11 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
           rel="stylesheet"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ec-theme-accent');if(t&&t!=='ruby'){document.documentElement.setAttribute('data-theme',t);document.body&&document.body.setAttribute('data-theme',t);}}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="min-h-full bg-background text-foreground antialiased selection:bg-rose-500/30 selection:text-rose-200 relative pb-16 lg:pb-0">
         <AmbientParticles />
