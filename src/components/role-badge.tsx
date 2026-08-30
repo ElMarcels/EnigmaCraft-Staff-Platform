@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
 import { Role } from "@prisma/client";
 import { ROLE_META } from "@/lib/role-meta";
 
@@ -29,27 +33,43 @@ export function RoleBadge({
 export function Avatar({
   name,
   color,
+  minecraftNick,
   className,
   isOnline = false,
 }: {
   name: string;
   color?: string | null;
+  minecraftNick?: string | null;
   className?: string;
   isOnline?: boolean;
 }) {
+  const [imgError, setImgError] = useState(false);
   const initial = (name || "?").charAt(0).toUpperCase();
   const bg = color || "#e11d48";
+  const nick = minecraftNick || (name && !name.includes(" ") ? name : null);
 
   return (
     <div className="relative shrink-0 select-none">
       <div
-        className={`flex h-9 w-9 items-center justify-center rounded-xl font-bold text-white shadow-md transition-transform duration-200 border border-white/20 ${className || ""}`}
+        className={`relative flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden font-bold text-white shadow-md transition-transform duration-200 border border-white/20 ${className || ""}`}
         style={{
           background: `linear-gradient(135deg, ${bg}, rgba(15, 23, 42, 0.9))`,
           boxShadow: `0 4px 14px ${bg}44`,
         }}
       >
-        {initial}
+        {nick && !imgError ? (
+          <Image
+            src={`https://minotar.net/helm/${encodeURIComponent(nick)}/64.png`}
+            alt={name}
+            width={64}
+            height={64}
+            unoptimized
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover [image-rendering:pixelated]"
+          />
+        ) : (
+          <span>{initial}</span>
+        )}
       </div>
       {isOnline && (
         <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">

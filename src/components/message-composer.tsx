@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sendMessage } from "@/actions/messaging";
 import { IconSend } from "@/components/icons";
+import { sounds } from "@/lib/sound-effects";
 
 export function MessageComposer({ channelId }: { channelId: string }) {
   const [text, setText] = useState("");
@@ -14,6 +15,7 @@ export function MessageComposer({ channelId }: { channelId: string }) {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!text.trim() || pending) return;
+    sounds.playMessage();
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       await sendMessage(formData);

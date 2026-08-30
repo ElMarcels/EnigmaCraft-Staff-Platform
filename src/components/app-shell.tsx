@@ -5,6 +5,7 @@ import type { User } from "@prisma/client";
 import { logoutAction } from "@/actions/auth";
 import { Avatar, RoleBadge } from "@/components/role-badge";
 import { GlobalSearch } from "@/components/global-search";
+import { CommandPalette } from "@/components/command-palette";
 import {
   IconLogout,
   IconBell,
@@ -21,6 +22,8 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-rose-500/30">
+      {/* Global Command Palette (Ctrl+K) */}
+      <CommandPalette />
       {/* Top Header Bar */}
       <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#07090e]/85 backdrop-blur-2xl px-4 md:px-8 py-3 flex items-center justify-between gap-4">
         {/* Brand Left */}

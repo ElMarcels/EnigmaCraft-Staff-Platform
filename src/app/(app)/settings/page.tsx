@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { RoleBadge, Avatar } from "@/components/role-badge";
 import { SettingsForm } from "@/components/settings-form";
 import { ThemeAccentPicker } from "@/components/theme-accent-picker";
+import { AudioAndMinecraftSettings } from "@/components/audio-and-minecraft-settings";
 import { IconPalette, IconShield, IconUsers } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function SettingsPage() {
       {/* User Profile Card */}
       <div className="glass-card p-6 md:p-7">
         <h2 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-          <IconUsers className="h-4 w-4 text-rose-400" /> Tu Ficha de Personal
+          <IconUsers className="h-4 w-4 theme-text" /> Tu Ficha de Personal
         </h2>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <Avatar
@@ -50,11 +51,16 @@ export default async function SettingsPage() {
         </div>
       </div>
 
+      {/* Minecraft Account & Audio Settings */}
+      <div className="glass-card p-6 md:p-7">
+        <AudioAndMinecraftSettings defaultNick={user.displayName} />
+      </div>
+
       {/* Theme Accent Color Picker Section */}
       <div className="glass-card p-6 md:p-7 space-y-4">
         <div>
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-            <IconPalette className="h-4 w-4 text-rose-400" /> Esquema de Acento & Resplandor (Glow)
+            <IconPalette className="h-4 w-4 theme-text" /> Esquema de Acento & Resplandor (Glow)
           </h2>
           <p className="text-xs text-slate-400 mt-1">
             Personaliza el color de los reflejos Liquid Glass, la barra inferior y los botones de acción.

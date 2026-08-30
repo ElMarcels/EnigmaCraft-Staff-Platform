@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { sounds } from "@/lib/sound-effects";
+import { LocalFolderSyncModal } from "@/components/local-folder-sync-modal";
+import { ConfigDiffEditor } from "@/components/config-diff-editor";
 import {
   createFolder,
   deleteFileOrFolder,
@@ -129,6 +132,23 @@ export function DriveView({
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Modals for Local Folder Sync and YAML Diff Editor
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [editorModalOpen, setEditorModalOpen] = useState(false);
+  const [editorFileName, setEditorFileName] = useState("config.yml");
+  const [editorContent, setEditorContent] = useState(
+    `# Configuración del Servidor EnigmaCraft Network\nserver-name: "EnigmaCraft Survival Custom"\nmax-players: 150\nview-distance: 12\n\nnetwork:\n  bungee-mode: true\n  redis-sync: true\n  packet-compression-threshold: 256\n\neconomy:\n  enabled: true\n  starting-balance: 500\n  currency-symbol: "⛁"\n\nsecurity:\n  anti-vpn: true\n  rate-limit-cps: 20\n  two-factor-staff: true\n`
+  );
+
+  function openFileEditor(name: string, sampleContent?: string) {
+    sounds.playPop();
+    setEditorFileName(name);
+    if (sampleContent) {
+      setEditorContent(sampleContent);
+    }
+    setEditorModalOpen(true);
+  }
+
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
@@ -142,6 +162,7 @@ export function DriveView({
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
+    sounds.playPop();
     const toastId = toast.loading(`Subiendo ${files.length} archivo(s)...`);
 
     try {
@@ -163,6 +184,7 @@ export function DriveView({
         }
       }
 
+      sounds.playSuccess();
       toast.success("Archivos subidos correctamente", { id: toastId });
       router.refresh();
     } catch {
@@ -182,6 +204,7 @@ export function DriveView({
       await renameFileOrFolder(fd);
       setRenaming(null);
       router.refresh();
+      sounds.playSuccess();
       toast.success("Nombre actualizado.");
     });
   }
@@ -191,6 +214,7 @@ export function DriveView({
     startTransition(async () => {
       await deleteFileOrFolder(id);
       router.refresh();
+      sounds.playPop();
       toast.success(`"${name}" eliminado.`);
     });
   }
@@ -198,6 +222,7 @@ export function DriveView({
   function copyFileName(name: string, id: string) {
     navigator.clipboard.writeText(name);
     setCopiedId(id);
+    sounds.playPop();
     toast.success(`Nombre "${name}" copiado al portapapeles`);
     setTimeout(() => setCopiedId(null), 2000);
   }
@@ -221,7 +246,22 @@ export function DriveView({
       }}
       className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-28 min-h-[calc(100vh-80px)]"
     >
-      {/* Header & Breadcrumb */}
+      {/* Modals */}
+      <LocalFolderSyncModal
+        isOpen={syncModalOpen}
+        onClose={() => setSyncModalOpen(false)}
+        existingFiles={items}
+        onSyncComplete={() => router.refresh()}
+      />
+
+      <ConfigDiffEditor
+        isOpen={editorModalOpen}
+        fileName={editorFileName}
+        initialContent={editorContent}
+        onClose={() => setEditorModalOpen(false)}
+      />
+
+      {/* Header & Breadcrumb & Storage Meter */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -229,7 +269,7 @@ export function DriveView({
               <IconFolder className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
                 Almacenamiento de Red & Drive
               </h1>
               <p className="text-xs font-medium text-slate-400 mt-0.5">
@@ -238,24 +278,36 @@ export function DriveView({
             </div>
           </div>
 
-          {/* Breadcrumb Path */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mt-3">
-            <Link href="/files" className="theme-link">
-              Raíz / Drive
-            </Link>
-            {breadcrumb.map((b) => (
-              <span key={b.id} className="flex items-center gap-2">
-                <span className="text-slate-600">/</span>
-                <Link href={`/files?folder=${b.id}`} className="theme-link text-slate-200">
-                  {b.name}
-                </Link>
-              </span>
-            ))}
+          {/* Breadcrumb Path & Storage Gauge */}
+          <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400 mt-3">
+            <div className="flex items-center gap-2">
+              <Link href="/files" className="theme-link">
+                Raíz / Drive
+              </Link>
+              {breadcrumb.map((b) => (
+                <span key={b.id} className="flex items-center gap-2">
+                  <span className="text-slate-600">/</span>
+                  <Link href={`/files?folder=${b.id}`} className="theme-link text-slate-200">
+                    {b.name}
+                  </Link>
+                </span>
+              ))}
+            </div>
+
+            <span className="text-slate-600 hidden sm:inline">|</span>
+
+            {/* Storage Usage Bar */}
+            <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-1 text-[11px] text-slate-400">
+              <span>Espacio: <strong className="text-slate-200">18.0 MB</strong> / 10 GB</span>
+              <div className="w-16 h-1.5 rounded-full bg-white/[0.1] overflow-hidden">
+                <div className="h-full w-[8%] bg-gradient-to-r from-[var(--ruby-light)] to-[var(--ruby-primary)]" />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {parentId !== null && (
             <Link
               href={parentId ? `/files?folder=${parentId}` : "/files"}
@@ -264,18 +316,50 @@ export function DriveView({
               <IconArrowLeft className="h-4 w-4" /> Subir nivel
             </Link>
           )}
+
+          {/* Local Folder Sync (Git Sync) Button */}
+          <button
+            type="button"
+            onClick={() => {
+              sounds.playPop();
+              setSyncModalOpen(true);
+            }}
+            className="btn-secondary text-xs font-semibold flex items-center gap-1.5"
+            title="Vincular carpeta de tu ordenador local"
+          >
+            <IconFolder className="h-4 w-4 text-[var(--ruby-light)]" />
+            <span>Vincular Carpeta PC</span>
+          </button>
+
+          {/* New Config / YAML Editor Button */}
+          <button
+            type="button"
+            onClick={() => openFileEditor("nuevo-plugin-config.yml")}
+            className="btn-secondary text-xs font-semibold flex items-center gap-1.5"
+            title="Abrir editor y validador de configs YAML"
+          >
+            <IconFile className="h-4 w-4 text-[var(--ruby-light)]" />
+            <span>Editor YAML</span>
+          </button>
+
           {canManage ? (
             <>
               <button
-                onClick={() => setNewFolder((v) => !v)}
+                onClick={() => {
+                  sounds.playPop();
+                  setNewFolder((v) => !v);
+                }}
                 className="btn-secondary text-xs"
               >
                 <IconPlus className="h-4 w-4" /> Nueva Carpeta
               </button>
               <button
-                onClick={() => fileInput.current?.click()}
+                onClick={() => {
+                  sounds.playPop();
+                  fileInput.current?.click();
+                }}
                 disabled={uploading}
-                className="btn-primary text-xs"
+                className="btn-primary text-xs font-semibold"
               >
                 <IconPlus className="h-4 w-4" /> Subir Archivo
               </button>
