@@ -364,14 +364,86 @@ export function ConfigDiffEditor({
             </div>
           ) : activeTab === "preview" && isDoc ? (
             /* Document / Word Reader Preview */
-            <div className="flex-1 min-h-0 overflow-y-auto p-8 max-w-3xl mx-auto space-y-4 text-slate-200 text-sm leading-relaxed">
-              <div className="border-b border-white/[0.08] pb-4 mb-6">
-                <h1 className="text-2xl font-extrabold text-white tracking-tight">{fileName}</h1>
-                <p className="text-xs text-slate-400 mt-1">Documento de Staff de EnigmaCraft Network</p>
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-10 max-w-4xl mx-auto w-full space-y-6 text-slate-200">
+              {/* Document Header Card */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/[0.08] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    <IconFile className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-white tracking-tight">{fileName}</h1>
+                    <p className="text-xs text-slate-400 mt-0.5">Documento de EnigmaCraft · Visor Integrado en la Web</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sounds.playPop();
+                      setActiveTab("editor");
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-white border border-white/[0.1] transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Editar Documento</span>
+                    <span>✏️</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-4 font-sans whitespace-pre-wrap">
-                {content || "No hay texto en este documento."}
+              {/* Document Body */}
+              <div className="rounded-2xl bg-[#03060c] border border-white/[0.08] p-6 md:p-8 shadow-xl">
+                {content ? (
+                  <div className="space-y-3.5">
+                    {content.split("\n").map((line, idx) => {
+                      const trimmed = line.trim();
+                      if (!trimmed) return <div key={idx} className="h-2" />;
+                      if (trimmed.startsWith("### ")) {
+                        return (
+                          <h3 key={idx} className="text-sm font-bold text-white pt-2 flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--ruby-light)]" />
+                            {trimmed.replace(/^###\s+/, "")}
+                          </h3>
+                        );
+                      }
+                      if (trimmed.startsWith("## ")) {
+                        return (
+                          <h2 key={idx} className="text-base font-bold text-slate-100 pt-4 border-b border-white/[0.06] pb-1.5">
+                            {trimmed.replace(/^##\s+/, "")}
+                          </h2>
+                        );
+                      }
+                      if (trimmed.startsWith("# ")) {
+                        return (
+                          <h1 key={idx} className="text-xl font-extrabold text-white tracking-tight pt-1">
+                            {trimmed.replace(/^#\s+/, "")}
+                          </h1>
+                        );
+                      }
+                      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                        return (
+                          <div key={idx} className="flex items-start gap-2.5 pl-2 text-slate-300 text-xs leading-relaxed">
+                            <span className="text-[var(--ruby-light)] font-bold">•</span>
+                            <span>{trimmed.replace(/^[-*]\s+/, "")}</span>
+                          </div>
+                        );
+                      }
+                      if (trimmed.startsWith("---") || trimmed.startsWith("===")) {
+                        return <hr key={idx} className="border-white/[0.08] my-4" />;
+                      }
+                      return (
+                        <p key={idx} className="text-xs text-slate-300 leading-relaxed font-sans">
+                          {trimmed}
+                        </p>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-slate-500 text-xs">
+                    Este documento está vacío. Haz clic en <strong>"Editar Documento"</strong> para redactar o pegar texto.
+                  </div>
+                )}
               </div>
             </div>
           ) : activeTab === "editor" ? (
