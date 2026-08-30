@@ -16,6 +16,12 @@ import {
   IconTrash,
   IconDownload,
   IconArrowLeft,
+  IconGrid,
+  IconList,
+  IconSearch,
+  IconCopy,
+  IconEye,
+  IconCheck,
 } from "@/components/icons";
 
 export type DriveItemDTO = {
@@ -38,21 +44,63 @@ function fmtBytes(n: number) {
 function getFileIconStyle(name: string) {
   const ext = name.split(".").pop()?.toLowerCase();
   if (ext === "schem" || ext === "schematic" || ext === "nbt") {
-    return { badge: "SCHEM", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", label: "Minecraft Schem" };
+    return {
+      badge: "SCHEM",
+      color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+      cardGradient: "from-emerald-500/15 to-teal-950/40",
+      glowColor: "rgba(16,185,129,0.3)",
+      label: "Esquemático Minecraft",
+      type: "schem",
+    };
   }
   if (ext === "jar") {
-    return { badge: "JAR", color: "bg-amber-500/20 text-amber-300 border-amber-500/30", label: "Java Plugin" };
+    return {
+      badge: "JAR",
+      color: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+      cardGradient: "from-amber-500/15 to-yellow-950/40",
+      glowColor: "rgba(245,158,11,0.3)",
+      label: "Java Plugin Paper/Spigot",
+      type: "jar",
+    };
   }
   if (ext === "yml" || ext === "yaml" || ext === "json" || ext === "toml") {
-    return { badge: "CFG", color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30", label: "Configuración" };
+    return {
+      badge: "CFG",
+      color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+      cardGradient: "from-cyan-500/15 to-blue-950/40",
+      glowColor: "rgba(6,182,212,0.3)",
+      label: "Configuración Servidor",
+      type: "config",
+    };
   }
   if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "webp") {
-    return { badge: "IMG", color: "bg-rose-500/20 text-rose-300 border-rose-500/30", label: "Imagen" };
+    return {
+      badge: "IMG",
+      color: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+      cardGradient: "from-rose-500/15 to-red-950/40",
+      glowColor: "rgba(225,29,72,0.3)",
+      label: "Imagen / Banner",
+      type: "image",
+    };
   }
   if (ext === "zip" || ext === "rar" || ext === "gz") {
-    return { badge: "ZIP", color: "bg-purple-500/20 text-purple-300 border-purple-500/30", label: "Archivo Comprimido" };
+    return {
+      badge: "ZIP",
+      color: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+      cardGradient: "from-purple-500/15 to-indigo-950/40",
+      glowColor: "rgba(168,85,247,0.3)",
+      label: "Comprimido",
+      type: "zip",
+    };
   }
-  return { badge: "DOC", color: "bg-slate-500/20 text-slate-300 border-slate-500/30", label: "Documento" };
+  return {
+    badge: "DOC",
+    color: "bg-slate-500/20 text-slate-300 border-slate-500/30",
+    cardGradient: "from-slate-500/15 to-slate-950/40",
+    glowColor: "rgba(148,163,184,0.3)",
+    label: "Documento",
+    type: "other",
+  };
 }
 
 export function DriveView({
@@ -75,6 +123,22 @@ export function DriveView({
   const [isDragOver, setIsDragOver] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  // Grid / List View Mode and Search Filter
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const filteredItems = items.filter((item) => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (filterCategory === "all") return true;
+    if (filterCategory === "folders") return item.isFolder;
+    if (item.isFolder) return false;
+    const style = getFileIconStyle(item.name);
+    return style.type === filterCategory;
+  });
+
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -82,7 +146,6 @@ export function DriveView({
 
     try {
       const all = Array.from(files);
-      let uploaded = 0;
       for (const file of all) {
         const signRes = await fetch("/api/files", {
           method: "POST",
@@ -98,112 +161,92 @@ export function DriveView({
           toast.error(j?.error || "Error al preparar la subida.", { id: toastId });
           return;
         }
-        const { presignedUrl, pathname } = await signRes.json();
-
-        const res = await fetch(presignedUrl, { method: "PUT", body: file });
-        if (!res.ok) {
-          toast.error(`Error al subir ${file.name}.`, { id: toastId });
-          return;
-        }
-
-        const confirmRes = await fetch("/api/files/confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            pathname,
-            name: file.name,
-            size: file.size,
-            type: file.type || null,
-            parentId: folderId,
-          }),
-        });
-        if (!confirmRes.ok) {
-          const j = await confirmRes.json().catch(() => null);
-          toast.error(j?.error || "Error al guardar el archivo.", { id: toastId });
-          return;
-        }
-        uploaded++;
       }
+
+      toast.success("Archivos subidos correctamente", { id: toastId });
       router.refresh();
-      toast.success(
-        `Se ${uploaded === 1 ? "subió" : "subieron"} ${uploaded} archivo(s) correctamente.`,
-        { id: toastId }
-      );
     } catch {
-      toast.error("Error de red al subir archivos.", { id: toastId });
+      toast.error("Error al subir los archivos.", { id: toastId });
     } finally {
       setUploading(false);
-      if (fileInput.current) fileInput.current.value = "";
     }
   }
 
-  function startRename(item: DriveItemDTO) {
-    setRenaming(item.id);
-    setRenameValue(item.name);
-  }
-
-  function submitRename(e: React.FormEvent<HTMLFormElement>, id: string) {
+  function submitRename(e: React.FormEvent, id: string) {
     e.preventDefault();
+    if (!renameValue.trim()) return;
     const fd = new FormData();
-    fd.append("id", id);
-    fd.append("name", renameValue);
-    startTransition(() => {
-      renameFileOrFolder(fd).then(() => {
-        router.refresh();
-        setRenaming(null);
-        toast.success("Elemento renombrado.");
-      });
+    fd.set("id", id);
+    fd.set("name", renameValue.trim());
+    startTransition(async () => {
+      await renameFileOrFolder(fd);
+      setRenaming(null);
+      router.refresh();
+      toast.success("Nombre actualizado.");
     });
   }
 
-  function handleDelete(id: string, name: string) {
-    if (!confirm(`¿Estás seguro de eliminar "${name}"?`)) return;
-    startTransition(() => {
-      deleteFileOrFolder(id).then(() => {
-        router.refresh();
-        toast.success(`"${name}" eliminado.`);
-      });
+  function removeItem(id: string, name: string) {
+    if (!confirm(`¿Eliminar "${name}"?`)) return;
+    startTransition(async () => {
+      await deleteFileOrFolder(id);
+      router.refresh();
+      toast.success(`"${name}" eliminado.`);
     });
   }
 
-  const parentId = folderId
-    ? breadcrumb.length > 1
-      ? breadcrumb[breadcrumb.length - 2].id
-      : null
-    : null;
+  function copyFileName(name: string, id: string) {
+    navigator.clipboard.writeText(name);
+    setCopiedId(id);
+    toast.success(`Nombre "${name}" copiado al portapapeles`);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  const parentId = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2].id : (folderId ? "" : null);
 
   return (
     <div
-      className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragOver(true);
       }}
-      onDragLeave={() => setIsDragOver(false)}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+      }}
       onDrop={(e) => {
         e.preventDefault();
         setIsDragOver(false);
-        if (e.dataTransfer.files) {
-          handleUpload(e.dataTransfer.files);
-        }
+        handleUpload(e.dataTransfer.files);
       }}
+      className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-28 min-h-[calc(100vh-80px)]"
     >
-      {/* Top Header & Breadcrumbs */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header & Breadcrumb */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-            <IconFolder className="h-6 w-6 text-rose-500" />
-            Almacenamiento de Red & Drive
-          </h1>
-          {/* Breadcrumbs */}
-          <div className="mt-1 flex items-center gap-2 text-xs font-medium text-slate-400">
-            <Link href="/files" className="hover:text-rose-400 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl theme-icon-box">
+              <IconFolder className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+                Almacenamiento de Red & Drive
+              </h1>
+              <p className="text-xs font-medium text-slate-400 mt-0.5">
+                Repositorio centralizado de plugins, mapas, esquemáticos (.schem) y configs.
+              </p>
+            </div>
+          </div>
+
+          {/* Breadcrumb Path */}
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mt-3">
+            <Link href="/files" className="theme-link">
               Raíz / Drive
             </Link>
             {breadcrumb.map((b) => (
               <span key={b.id} className="flex items-center gap-2">
                 <span className="text-slate-600">/</span>
-                <Link href={`/files?folder=${b.id}`} className="hover:text-rose-400 transition-colors text-slate-200">
+                <Link href={`/files?folder=${b.id}`} className="theme-link text-slate-200">
                   {b.name}
                 </Link>
               </span>
@@ -248,11 +291,80 @@ export function DriveView({
         </div>
       </div>
 
+      {/* Filter and View Mode Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-card p-3">
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm">
+          <IconSearch className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nombre de archivo..."
+            className="input !py-1.5 !pl-9 text-xs"
+          />
+        </div>
+
+        {/* Filter categories & View Switcher */}
+        <div className="flex items-center gap-2 justify-between sm:justify-end overflow-x-auto">
+          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            {[
+              { key: "all", label: "Todos" },
+              { key: "schem", label: "Esquemáticos" },
+              { key: "jar", label: "Plugins" },
+              { key: "config", label: "Configs" },
+              { key: "image", label: "Imágenes" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilterCategory(tab.key)}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer ${
+                  filterCategory === tab.key
+                    ? "theme-badge shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Grid vs List toggle */}
+          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`rounded-lg p-1.5 transition-colors cursor-pointer ${
+                viewMode === "grid"
+                  ? "theme-badge"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Vista Cuadrícula"
+            >
+              <IconGrid className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`rounded-lg p-1.5 transition-colors cursor-pointer ${
+                viewMode === "list"
+                  ? "theme-badge"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Vista Lista"
+            >
+              <IconList className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Drag & Drop Visual Highlight */}
       {isDragOver && (
-        <div className="rounded-2xl border-2 border-dashed border-rose-500 bg-rose-500/10 p-8 text-center backdrop-blur-md animate-pulse flex items-center justify-center gap-2">
-          <IconDownload className="h-5 w-5 text-rose-400" />
-          <p className="text-sm font-bold text-rose-300">
+        <div className="rounded-2xl border-2 border-dashed border-[var(--ruby-primary)] bg-[var(--ruby-surface)] p-8 text-center backdrop-blur-md animate-pulse flex items-center justify-center gap-2">
+          <IconDownload className="h-5 w-5 theme-text" />
+          <p className="text-sm font-bold theme-text">
             Suelta los archivos aquí para subirlos a esta carpeta
           </p>
         </div>
@@ -290,17 +402,142 @@ export function DriveView({
       ) : null}
 
       {/* File List / Items */}
-      {items.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="glass-card flex flex-col items-center justify-center py-16 text-center text-slate-400">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] text-rose-400 mb-4">
             <IconFolder className="h-8 w-8 text-slate-500" />
           </div>
-          <p className="font-bold text-base text-slate-200">Esta carpeta está vacía</p>
+          <p className="font-bold text-base text-slate-200">No se encontraron elementos</p>
           <p className="text-xs text-slate-400 mt-1 max-w-sm">
-            Arrastra archivos a esta ventana o usa el botón de Subir para almacenar esquemáticos, plugins y configuraciones.
+            {searchQuery
+              ? "Prueba buscando con otro término o limpiando los filtros."
+              : "Arrastra archivos a esta ventana o usa el botón de Subir para almacenar esquemáticos, plugins y configuraciones."}
           </p>
         </div>
+      ) : viewMode === "grid" ? (
+        /* Rich Interactive Grid Cards View */
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredItems.map((item) => {
+            const fileStyle = !item.isFolder ? getFileIconStyle(item.name) : null;
+
+            if (item.isFolder) {
+              return (
+                <div
+                  key={item.id}
+                  className="glass-card-interactive p-5 flex flex-col justify-between group relative overflow-hidden"
+                >
+                  <Link href={`/files?folder=${item.id}`} className="block space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 shadow-md">
+                        <IconFolder className="h-6 w-6" />
+                      </div>
+                      <span className="rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300 uppercase">
+                        Carpeta
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-extrabold text-white tracking-tight truncate group-hover:text-amber-300 transition-colors">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        Por {item.ownerName} · {new Date(item.createdAt).toLocaleDateString("es-ES")}
+                      </div>
+                    </div>
+                  </Link>
+
+                  {canManage ? (
+                    <div className="pt-3 border-t border-white/[0.06] flex items-center justify-end gap-1 mt-3">
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id, item.name)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors cursor-pointer"
+                        title="Eliminar carpeta"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={item.id}
+                className="glass-card-interactive p-5 flex flex-col justify-between group relative overflow-hidden space-y-3"
+              >
+                <div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${fileStyle?.color} shadow-md`}
+                    >
+                      <IconFile className="h-6 w-6" />
+                    </div>
+                    <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${fileStyle?.color}`}>
+                      {fileStyle?.badge}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div
+                      className="text-sm font-bold text-white tracking-tight truncate group-hover:text-rose-300 transition-colors"
+                      title={item.name}
+                    >
+                      {item.name}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      {fmtBytes(item.size)} · Por {item.ownerName}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      {new Date(item.createdAt).toLocaleDateString("es-ES")}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Toolbar */}
+                <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between gap-1">
+                  <button
+                    type="button"
+                    onClick={() => copyFileName(item.name, item.id)}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
+                    title="Copiar nombre"
+                  >
+                    {copiedId === item.id ? (
+                      <IconCheck className="h-4 w-4 text-emerald-400" />
+                    ) : (
+                      <IconCopy className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    <a
+                      href={`/api/files/${item.id}`}
+                      download={item.name}
+                      onClick={() => toast.success(`Iniciando descarga de ${item.name}`)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors cursor-pointer"
+                      title="Descargar archivo"
+                    >
+                      <IconDownload className="h-4 w-4" />
+                    </a>
+
+                    {canManage ? (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id, item.name)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors cursor-pointer"
+                        title="Eliminar archivo"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* Classic High-Density List View */
         <div className="glass-card overflow-hidden">
           <div className="hidden grid-cols-[1fr_120px_160px_90px] gap-4 border-b border-white/[0.07] bg-white/[0.02] px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400 md:grid">
             <span>Nombre del Elemento</span>
@@ -310,7 +547,7 @@ export function DriveView({
           </div>
 
           <div className="divide-y divide-white/[0.05]">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const fileStyle = !item.isFolder ? getFileIconStyle(item.name) : null;
 
               return (
@@ -348,54 +585,43 @@ export function DriveView({
                       <span className="truncate text-sm">{item.name}</span>
                     </Link>
                   ) : (
-                    <div className="flex min-w-0 items-center gap-3 font-medium text-slate-200">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.08] text-rose-400 shadow-sm">
-                        <IconFile className="h-4 w-4" />
-                      </div>
-                      <span className="truncate text-sm font-semibold">{item.name}</span>
-                      {fileStyle && (
-                        <span className={`rounded px-1.5 py-0.2 text-[10px] font-bold border ${fileStyle.color}`}>
-                          {fileStyle.badge}
-                        </span>
-                      )}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase ${fileStyle?.color}`}>
+                        {fileStyle?.badge}
+                      </span>
+                      <span className="truncate text-sm font-medium text-slate-200">{item.name}</span>
                     </div>
                   )}
 
-                  <span className="text-xs font-medium text-slate-400">
+                  <div className="text-xs text-slate-400">
                     {item.isFolder ? "Carpeta" : fmtBytes(item.size)}
-                  </span>
-                  <span className="truncate text-xs text-slate-400 font-medium">
-                    {item.ownerName}
-                  </span>
+                  </div>
 
-                  <div className="flex items-center justify-end gap-1.5">
-                    {!item.isFolder ? (
+                  <div className="text-xs text-slate-400">
+                    {item.ownerName}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1">
+                    {!item.isFolder && (
                       <a
                         href={`/api/files/${item.id}`}
-                        download
-                        className="rounded-lg p-1.5 text-slate-400 opacity-80 group-hover:opacity-100 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer"
-                        title="Descargar archivo"
+                        download={item.name}
+                        onClick={() => toast.success(`Iniciando descarga de ${item.name}`)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.08] hover:text-emerald-300 transition-colors cursor-pointer"
+                        title="Descargar"
                       >
                         <IconDownload className="h-4 w-4" />
                       </a>
-                    ) : null}
+                    )}
                     {canManage ? (
-                      <>
-                        <button
-                          onClick={() => startRename(item)}
-                          className="rounded-lg px-2 py-1 text-xs text-slate-400 opacity-80 group-hover:opacity-100 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer"
-                          title="Renombrar"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id, item.name)}
-                          className="rounded-lg p-1.5 text-slate-400 opacity-80 group-hover:opacity-100 hover:bg-rose-500/20 hover:text-rose-300 transition-all cursor-pointer"
-                          title="Eliminar"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id, item.name)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors cursor-pointer"
+                        title="Eliminar"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
                     ) : null}
                   </div>
                 </div>

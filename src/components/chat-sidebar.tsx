@@ -120,7 +120,7 @@ export function ChatSidebar({
                     key={ch.id}
                     className={`group relative flex items-center justify-between rounded-xl px-2.5 py-1.5 transition-all select-none ${
                       active
-                        ? "bg-rose-500/15 text-rose-200 border-l-2 border-rose-500 font-semibold shadow-sm"
+                        ? "theme-badge font-semibold shadow-sm border-l-2 !border-[var(--ruby-primary)]"
                         : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
                     }`}
                   >
@@ -130,9 +130,9 @@ export function ChatSidebar({
                       title={ch.description || undefined}
                     >
                       {ch.type === "VOICE" ? (
-                        <IconVolume className={`h-4 w-4 shrink-0 ${active ? "text-rose-400" : "text-slate-400"}`} />
+                        <IconVolume className={`h-4 w-4 shrink-0 ${active ? "theme-text" : "text-slate-400"}`} />
                       ) : (
-                        <IconHash className={`h-4 w-4 shrink-0 ${active ? "text-rose-400" : "text-slate-400"}`} />
+                        <IconHash className={`h-4 w-4 shrink-0 ${active ? "theme-text" : "text-slate-400"}`} />
                       )}
                       <span className="truncate text-xs">{ch.name}</span>
                     </Link>

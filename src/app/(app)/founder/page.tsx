@@ -67,9 +67,9 @@ export default async function FounderHomePage() {
             <Link
               key={c.label}
               href={c.href}
-              className="glass-card-interactive p-5 transition-all"
+              className="glass-card-interactive p-5 transition-all theme-glow-card"
             >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl theme-icon-box">
                 <Icon />
               </div>
               <div className="text-2xl font-extrabold text-white">{c.value}</div>
@@ -83,13 +83,13 @@ export default async function FounderHomePage() {
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="glass-card p-6">
           <h2 className="mb-3 flex items-center gap-2 font-bold text-white text-base">
-            <IconShield className="h-5 w-5 text-rose-400" /> Acciones Rápidas
+            <IconShield className="h-5 w-5 theme-text" /> Acciones Rápidas
           </h2>
           <ul className="space-y-2 text-sm text-slate-300">
-            <li>· <Link href="/founder/users" className="text-rose-400 hover:underline">Crear o gestionar usuarios</Link></li>
-            <li>· <Link href="/founder/backups" className="text-rose-400 hover:underline">Generar copia de seguridad</Link></li>
-            <li>· <Link href="/chat" className="text-rose-400 hover:underline">Ir al chat del staff</Link></li>
-            <li>· <Link href="/files" className="text-rose-400 hover:underline">Gestionar archivos del servidor</Link></li>
+            <li>· <Link href="/founder/users" className="theme-link">Crear o gestionar usuarios</Link></li>
+            <li>· <Link href="/founder/backups" className="theme-link">Generar copia de seguridad</Link></li>
+            <li>· <Link href="/chat" className="theme-link">Ir al chat del staff</Link></li>
+            <li>· <Link href="/files" className="theme-link">Gestionar archivos del servidor</Link></li>
           </ul>
         </div>
         <div className="glass-card p-6">

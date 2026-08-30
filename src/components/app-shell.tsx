@@ -25,12 +25,18 @@ export function AppShell({
       <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#07090e]/85 backdrop-blur-2xl px-4 md:px-8 py-3 flex items-center justify-between gap-4">
         {/* Brand Left */}
         <Link href="/dashboard" className="flex items-center gap-3 group select-none">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-700 text-lg font-extrabold text-white shadow-lg shadow-rose-950/60 border border-white/20 transition-transform group-hover:scale-105">
+          <div
+            style={{
+              background: "linear-gradient(135deg, var(--ruby-light) 0%, var(--ruby-primary) 100%)",
+              boxShadow: "0 4px 18px var(--ruby-glow)",
+            }}
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl text-lg font-extrabold text-white border border-white/20 transition-transform group-hover:scale-105"
+          >
             EC
           </div>
           <div>
             <div className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
-              Enigma<span className="text-rose-500">Craft</span>
+              Enigma<span style={{ color: "var(--ruby-light)" }}>Craft</span>
             </div>
             <div className="text-[10px] font-semibold tracking-wider uppercase text-slate-400">
               Staff Network

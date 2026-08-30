@@ -7,13 +7,26 @@
   --foreground-muted: #94a3b8;
   --foreground-subtle: #64748b;
 
-  /* Ruby / Crimson Accents */
+  /* Theme Accents (Default: Ruby) */
   --ruby-primary: #e11d48;
   --ruby-light: #fb7185;
-  --ruby-glow: rgba(225, 29, 72, 0.35);
-  --ruby-glow-soft: rgba(225, 29, 72, 0.15);
-  --ruby-surface: rgba(225, 29, 72, 0.08);
-  --ruby-border: rgba(244, 63, 94, 0.25);
+  --ruby-glow: rgba(225, 29, 72, 0.45);
+  --ruby-glow-soft: rgba(225, 29, 72, 0.18);
+  --ruby-surface: rgba(225, 29, 72, 0.12);
+  --ruby-border: rgba(244, 63, 94, 0.35);
+  --bg-glow-1: rgba(225, 29, 72, 0.22);
+  --bg-glow-2: rgba(190, 18, 60, 0.12);
+  --bg-glow-3: rgba(136, 19, 55, 0.10);
+  --text-accent: #fb7185;
+
+  /* Aliases */
+  --theme-primary: var(--ruby-primary);
+  --theme-light: var(--ruby-light);
+  --theme-glow: var(--ruby-glow);
+  --theme-glow-soft: var(--ruby-glow-soft);
+  --theme-surface: var(--ruby-surface);
+  --theme-border: var(--ruby-border);
+  --theme-text: var(--text-accent);
 
   /* Glass Tokens */
   --glass-bg: rgba(255, 255, 255, 0.03);
@@ -29,12 +42,196 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+[data-theme="amethyst"] {
+  --ruby-primary: #a855f7;
+  --ruby-light: #c084fc;
+  --ruby-glow: rgba(168, 85, 247, 0.5);
+  --ruby-glow-soft: rgba(168, 85, 247, 0.2);
+  --ruby-surface: rgba(168, 85, 247, 0.14);
+  --ruby-border: rgba(168, 85, 247, 0.4);
+  --bg-glow-1: rgba(168, 85, 247, 0.26);
+  --bg-glow-2: rgba(126, 34, 206, 0.16);
+  --bg-glow-3: rgba(88, 28, 135, 0.14);
+  --text-accent: #c084fc;
+}
+
+[data-theme="emerald"] {
+  --ruby-primary: #10b981;
+  --ruby-light: #34d399;
+  --ruby-glow: rgba(16, 185, 129, 0.5);
+  --ruby-glow-soft: rgba(16, 185, 129, 0.2);
+  --ruby-surface: rgba(16, 185, 129, 0.14);
+  --ruby-border: rgba(16, 185, 129, 0.4);
+  --bg-glow-1: rgba(16, 185, 129, 0.26);
+  --bg-glow-2: rgba(5, 150, 105, 0.16);
+  --bg-glow-3: rgba(4, 120, 87, 0.14);
+  --text-accent: #34d399;
+}
+
+[data-theme="cyan"] {
+  --ruby-primary: #06b6d4;
+  --ruby-light: #22d3ee;
+  --ruby-glow: rgba(6, 182, 212, 0.5);
+  --ruby-glow-soft: rgba(6, 182, 212, 0.2);
+  --ruby-surface: rgba(6, 182, 212, 0.14);
+  --ruby-border: rgba(6, 182, 212, 0.4);
+  --bg-glow-1: rgba(6, 182, 212, 0.26);
+  --bg-glow-2: rgba(8, 145, 178, 0.16);
+  --bg-glow-3: rgba(14, 116, 144, 0.14);
+  --text-accent: #22d3ee;
+}
+
+[data-theme="amber"] {
+  --ruby-primary: #f59e0b;
+  --ruby-light: #fbbf24;
+  --ruby-glow: rgba(245, 158, 11, 0.5);
+  --ruby-glow-soft: rgba(245, 158, 11, 0.2);
+  --ruby-surface: rgba(245, 158, 11, 0.14);
+  --ruby-border: rgba(245, 158, 11, 0.4);
+  --bg-glow-1: rgba(245, 158, 11, 0.26);
+  --bg-glow-2: rgba(217, 119, 6, 0.16);
+  --bg-glow-3: rgba(180, 83, 9, 0.14);
+  --text-accent: #fbbf24;
+}
+
+[data-theme="sakura"] {
+  --ruby-primary: #ec4899;
+  --ruby-light: #f472b6;
+  --ruby-glow: rgba(236, 72, 153, 0.5);
+  --ruby-glow-soft: rgba(236, 72, 153, 0.2);
+  --ruby-surface: rgba(236, 72, 153, 0.14);
+  --ruby-border: rgba(236, 72, 153, 0.4);
+  --bg-glow-1: rgba(236, 72, 153, 0.26);
+  --bg-glow-2: rgba(190, 24, 93, 0.16);
+  --bg-glow-3: rgba(131, 24, 67, 0.14);
+  --text-accent: #f472b6;
+}
+
+[data-theme="ocean"] {
+  --ruby-primary: #3b82f6;
+  --ruby-light: #60a5fa;
+  --ruby-glow: rgba(59, 130, 246, 0.5);
+  --ruby-glow-soft: rgba(59, 130, 246, 0.2);
+  --ruby-surface: rgba(59, 130, 246, 0.14);
+  --ruby-border: rgba(59, 130, 246, 0.4);
+  --bg-glow-1: rgba(59, 130, 246, 0.26);
+  --bg-glow-2: rgba(29, 78, 216, 0.16);
+  --bg-glow-3: rgba(30, 58, 138, 0.14);
+  --text-accent: #60a5fa;
+}
+
+[data-theme="lime"] {
+  --ruby-primary: #84cc16;
+  --ruby-light: #a3e635;
+  --ruby-glow: rgba(132, 204, 22, 0.5);
+  --ruby-glow-soft: rgba(132, 204, 22, 0.2);
+  --ruby-surface: rgba(132, 204, 22, 0.14);
+  --ruby-border: rgba(132, 204, 22, 0.4);
+  --bg-glow-1: rgba(132, 204, 22, 0.26);
+  --bg-glow-2: rgba(77, 124, 15, 0.16);
+  --bg-glow-3: rgba(54, 83, 20, 0.14);
+  --text-accent: #a3e635;
+}
+
+[data-theme="blood"] {
+  --ruby-primary: #dc2626;
+  --ruby-light: #ef4444;
+  --ruby-glow: rgba(220, 38, 38, 0.55);
+  --ruby-glow-soft: rgba(220, 38, 38, 0.22);
+  --ruby-surface: rgba(220, 38, 38, 0.15);
+  --ruby-border: rgba(220, 38, 38, 0.45);
+  --bg-glow-1: rgba(220, 38, 38, 0.28);
+  --bg-glow-2: rgba(153, 27, 27, 0.18);
+  --bg-glow-3: rgba(69, 10, 10, 0.14);
+  --text-accent: #ef4444;
+}
+
+[data-theme="void"] {
+  --ruby-primary: #6366f1;
+  --ruby-light: #818cf8;
+  --ruby-glow: rgba(99, 102, 241, 0.5);
+  --ruby-glow-soft: rgba(99, 102, 241, 0.2);
+  --ruby-surface: rgba(99, 102, 241, 0.14);
+  --ruby-border: rgba(99, 102, 241, 0.4);
+  --bg-glow-1: rgba(99, 102, 241, 0.26);
+  --bg-glow-2: rgba(67, 56, 202, 0.16);
+  --bg-glow-3: rgba(49, 46, 129, 0.14);
+  --text-accent: #818cf8;
+}
+
+[data-theme="sunset"] {
+  --ruby-primary: #f97316;
+  --ruby-light: #fb923c;
+  --ruby-glow: rgba(249, 115, 22, 0.5);
+  --ruby-glow-soft: rgba(249, 115, 22, 0.2);
+  --ruby-surface: rgba(249, 115, 22, 0.14);
+  --ruby-border: rgba(249, 115, 22, 0.4);
+  --bg-glow-1: rgba(249, 115, 22, 0.26);
+  --bg-glow-2: rgba(194, 65, 12, 0.16);
+  --bg-glow-3: rgba(124, 45, 18, 0.14);
+  --text-accent: #fb923c;
+}
+
+[data-theme="diamond"] {
+  --ruby-primary: #38bdf8;
+  --ruby-light: #7dd3fc;
+  --ruby-glow: rgba(56, 189, 248, 0.5);
+  --ruby-glow-soft: rgba(56, 189, 248, 0.2);
+  --ruby-surface: rgba(56, 189, 248, 0.14);
+  --ruby-border: rgba(56, 189, 248, 0.4);
+  --bg-glow-1: rgba(56, 189, 248, 0.26);
+  --bg-glow-2: rgba(3, 105, 161, 0.16);
+  --bg-glow-3: rgba(12, 74, 110, 0.14);
+  --text-accent: #7dd3fc;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-ruby: var(--ruby-primary);
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Universal Liquid Glass Theme Utilities */
+.theme-text {
+  color: var(--theme-light) !important;
+}
+
+.theme-link {
+  color: var(--theme-light) !important;
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+.theme-link:hover {
+  filter: brightness(1.2);
+  text-decoration: underline;
+}
+
+.theme-bg-surface {
+  background-color: var(--theme-surface) !important;
+}
+
+.theme-border {
+  border-color: var(--theme-border) !important;
+}
+
+.theme-badge {
+  background-color: var(--theme-surface) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-light) !important;
+}
+
+.theme-icon-box {
+  background-color: var(--theme-surface) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-light) !important;
+  box-shadow: 0 0 16px var(--theme-glow-soft) !important;
+}
+
+.theme-glow-card:hover {
+  border-color: var(--theme-border) !important;
+  box-shadow: 0 12px 32px -4px var(--theme-glow-soft) !important;
 }
 
 * {
@@ -53,9 +250,9 @@ body {
   overflow-x: hidden;
   position: relative;
   background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(225, 29, 72, 0.16), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(190, 18, 60, 0.08), transparent 60%),
-    radial-gradient(ellipse 50% 30% at 10% 90%, rgba(136, 19, 55, 0.08), transparent 50%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, var(--bg-glow-1), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, var(--bg-glow-2), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 10% 90%, var(--bg-glow-3), transparent 50%);
   background-attachment: fixed;
 }
 
@@ -71,8 +268,8 @@ body {
 .particle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.8) 0%, rgba(225, 29, 72, 0) 70%);
-  opacity: 0.35;
+  background: radial-gradient(circle, var(--ruby-primary) 0%, rgba(0, 0, 0, 0) 70%);
+  opacity: 0.45;
   filter: blur(1px);
   animation: particle-float linear infinite;
 }
@@ -113,7 +310,7 @@ body {
 
 /* Base Glassmorphism Component Layer */
 @layer components {
-  /* Floating Reactive Bottom Pill Dock Navigation */
+  /* Liquid Glass Floating Pill Dock Navbar */
   .pill-dock {
     position: fixed;
     bottom: 1.5rem;
@@ -125,13 +322,18 @@ body {
     gap: 0.5rem;
     padding: 0.45rem 0.65rem;
     border-radius: 9999px;
-    background: rgba(9, 13, 22, 0.88);
+    background: rgba(9, 13, 22, 0.90);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-top: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.75), 0 0 35px -5px rgba(225, 29, 72, 0.3);
-    transition: all 300ms var(--ease-out);
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8), 0 0 40px -4px var(--theme-glow);
+    transition: all 350ms var(--ease-out);
+  }
+
+  .pill-dock:hover {
+    box-shadow: 0 24px 60px -8px rgba(0, 0, 0, 0.85), 0 0 50px -2px var(--theme-glow);
+    border-color: var(--theme-border);
   }
 
   .pill-dock-item {
@@ -140,13 +342,13 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    height: 2.75rem;
+    height: 2.65rem;
     border-radius: 9999px;
     color: #94a3b8;
     cursor: pointer;
     user-select: none;
     padding: 0 0.65rem;
-    transition: all 300ms var(--ease-out);
+    transition: all 450ms var(--ease-out);
     white-space: nowrap;
   }
 
@@ -162,13 +364,14 @@ body {
     transform: scale(0.94);
   }
 
-  /* Active Morphing Pill with Ruby Glow */
+  /* Active Morphing Pill with Dynamic Theme Glow */
   .pill-dock-item-active {
     color: #ffffff;
-    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 55%, #be123c 100%);
-    box-shadow: 0 4px 18px rgba(225, 29, 72, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-    padding: 0 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, var(--theme-light) 0%, var(--theme-primary) 100%);
+    box-shadow: 0 4px 24px var(--theme-glow), 0 0 16px var(--theme-glow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    padding: 0 1.15rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 450ms var(--ease-out);
   }
 
   /* Dynamic Typewriter / Reveal Label Animation */
@@ -232,9 +435,9 @@ body {
     .glass-card-interactive:hover {
       transform: translateY(-2px);
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
-      border-color: rgba(244, 63, 94, 0.35);
+      border-color: var(--ruby-border);
       border-top-color: rgba(255, 255, 255, 0.28);
-      box-shadow: 0 16px 40px -8px rgba(225, 29, 72, 0.18), 0 0 20px -2px rgba(225, 29, 72, 0.1);
+      box-shadow: 0 16px 40px -8px var(--ruby-glow-soft), 0 0 20px -2px var(--ruby-glow-soft);
     }
   }
 
@@ -250,13 +453,13 @@ body {
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   }
 
-  /* Crimson / Ruby Primary Button with Tactile Feedback */
+  /* Primary Button with Tactile Feedback & Dynamic Theme Accent */
   .btn-primary {
     @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-white shadow-lg overflow-hidden cursor-pointer select-none;
-    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 60%, #be123c 100%);
+    background: linear-gradient(135deg, var(--ruby-light) 0%, var(--ruby-primary) 100%);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-top: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 4px 18px rgba(225, 29, 72, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 18px var(--ruby-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     padding: 0.55rem 1.15rem;
     font-size: 0.875rem;
     transition: transform 160ms var(--ease-out), filter 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
@@ -264,8 +467,8 @@ body {
 
   @media (hover: hover) and (pointer: fine) {
     .btn-primary:hover {
-      filter: brightness(1.08);
-      box-shadow: 0 6px 24px rgba(225, 29, 72, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      filter: brightness(1.12);
+      box-shadow: 0 6px 24px var(--ruby-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
   }
 
@@ -282,11 +485,9 @@ body {
 
   /* Glass Secondary Button */
   .btn-secondary {
-    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-white cursor-pointer select-none;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl font-medium text-slate-200 cursor-pointer select-none;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
     padding: 0.55rem 1.15rem;
     font-size: 0.875rem;
     transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
@@ -339,8 +540,8 @@ body {
 
   .input:focus {
     background: rgba(255, 255, 255, 0.06);
-    border-color: #f43f5e;
-    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.18), 0 0 16px -2px rgba(225, 29, 72, 0.25);
+    border-color: var(--ruby-primary);
+    box-shadow: 0 0 0 3px var(--ruby-surface), 0 0 16px -2px var(--ruby-glow);
   }
 
   select.input option {

@@ -106,9 +106,9 @@ export default async function DashboardPage() {
       sub: "Miembros activos",
       icon: IconUsers,
       href: "/founder/users",
-      gradient: "from-rose-500/20 to-red-600/10",
-      iconColor: "text-rose-400",
-      border: "hover:border-rose-500/40",
+      gradient: "from-white/[0.08] to-transparent",
+      iconColor: "theme-text",
+      border: "theme-glow-card",
     },
     {
       label: "Canales de Chat",
@@ -146,7 +146,10 @@ export default async function DashboardPage() {
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto pb-28">
       {/* Welcome Hero Banner */}
       <div className="glass-card relative overflow-hidden p-6 md:p-8">
-        <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-rose-600/15 blur-3xl pointer-events-none" />
+        <div
+          style={{ backgroundColor: "var(--ruby-glow)" }}
+          className="absolute -right-12 -top-12 h-44 w-44 rounded-full blur-3xl pointer-events-none"
+        />
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -226,7 +229,7 @@ export default async function DashboardPage() {
             </h2>
             <Link
               href="/directory"
-              className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+              className="text-xs font-semibold theme-link"
             >
               Ver todos
             </Link>
@@ -268,12 +271,12 @@ export default async function DashboardPage() {
         <section className="lg:col-span-2 glass-card p-6 flex flex-col">
           <div className="flex items-center justify-between mb-5">
             <h2 className="flex items-center gap-2.5 text-base font-bold text-white">
-              <IconMegaphone className="h-5 w-5 text-rose-400" />
+              <IconMegaphone className="h-5 w-5 theme-text" />
               Últimos Anuncios
             </h2>
             <Link
               href="/announcements"
-              className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+              className="text-xs font-semibold theme-link"
             >
               Ver historial
             </Link>
@@ -292,7 +295,7 @@ export default async function DashboardPage() {
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-300 uppercase tracking-wider">
+                      <span className="rounded-md theme-badge px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                         Comunicado
                       </span>
                       <span className="text-[11px] font-medium text-slate-400">
@@ -313,7 +316,7 @@ export default async function DashboardPage() {
                     <span className="truncate">Por {a.author.displayName}</span>
                     <Link
                       href="/announcements"
-                      className="text-rose-400 hover:text-rose-300 font-medium inline-flex items-center gap-1"
+                      className="theme-link font-medium inline-flex items-center gap-1"
                     >
                       Leer <IconArrowRight className="h-3 w-3" />
                     </Link>

@@ -20,7 +20,13 @@ export default async function FounderLayout({
       <div className="border-b border-white/[0.08] bg-[#090d16]/85 backdrop-blur-2xl px-6 md:px-8 py-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-700 text-white shadow-md shadow-rose-950/60 border border-white/20">
+            <div
+              style={{
+                background: "linear-gradient(135deg, var(--ruby-light) 0%, var(--ruby-primary) 100%)",
+                boxShadow: "0 4px 18px var(--ruby-glow)",
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white border border-white/20"
+            >
               <IconShield className="h-5 w-5" />
             </div>
             <div>
@@ -28,7 +34,14 @@ export default async function FounderLayout({
                 <h1 className="text-lg font-extrabold text-white tracking-tight">
                   Panel de Fundadores
                 </h1>
-                <span className="rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-300 uppercase tracking-wider">
+                <span
+                  style={{
+                    backgroundColor: "var(--ruby-surface)",
+                    borderColor: "var(--ruby-border)",
+                    color: "var(--ruby-light)",
+                  }}
+                  className="rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                >
                   Acceso Total
                 </span>
               </div>
