@@ -5,15 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUserOrThrow, requireRole } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { notifyMentions } from "@/lib/mentions";
-import { Role } from "@prisma/client";
 
-const ROLE_RANK: Record<Role, number> = {
-  FOUNDER: 5,
-  ADMIN: 4,
-  MOD: 3,
-  BUILDER: 2,
-  STAFF: 1,
-};
 
 export async function createCategory(formData: FormData) {
   await requireRole("FOUNDER");
@@ -160,22 +152,20 @@ export async function sendDm(formData: FormData) {
     return { error: "El usuario no existe o está inactivo" };
   }
 
-  const senderRank = ROLE_RANK[user.role];
-  const recipientRank = ROLE_RANK[recipient.role];
-  if (recipientRank - senderRank >= 2) {
-    const prior = await prisma.directMessage.findFirst({
-      where: { senderId: recipient.id, recipientId: user.id },
-    });
-    if (!prior) {
-      return {
-        error: `${recipient.displayName} es de un rango superior al tuyo; solo puede iniciar la conversación un rango igual o superior.`,
-      };
-    }
-  }
-
   await prisma.directMessage.create({
     data: { senderId: user.id, recipientId: recipient.id, content },
   });
+
+  // Notificar al destinatario sobre el nuevo mensaje directo
+  await prisma.notification.create({
+    data: {
+      userId: recipient.id,
+      type: "MESSAGE_MENTION",
+      title: `Mensaje directo de ${user.displayName}`,
+      body: content.length > 80 ? `${content.slice(0, 80)}…` : content,
+      href: `/dm/${user.id}`,
+    },
+  }).catch(() => {});
 
   await notifyMentions({
     content,
