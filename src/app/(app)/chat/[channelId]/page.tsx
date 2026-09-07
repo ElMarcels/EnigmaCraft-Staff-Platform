@@ -52,8 +52,8 @@ export default async function ChannelPage({
     category: { name: "COMUNICACIÓN STAFF" },
   };
 
-  let messages: any[] = DEMO_CHANNEL_MESSAGES[channelId] || DEMO_CHANNEL_MESSAGES.general;
-  let members: ChannelMemberDTO[] = DEMO_MEMBERS;
+  let messages: any[] = [];
+  let members: ChannelMemberDTO[] = [];
 
   try {
     const [dbChannel, dbUsers] = await Promise.all([
@@ -75,9 +75,7 @@ export default async function ChannelPage({
         include: { author: true, reactions: { include: { user: true } } },
         take: 200,
       });
-      if (dbMessages.length > 0) {
-        messages = dbMessages;
-      }
+      messages = dbMessages;
     }
 
     if (dbUsers && dbUsers.length > 0) {

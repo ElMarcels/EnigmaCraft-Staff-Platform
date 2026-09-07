@@ -3,11 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { createHash } from "node:crypto";
-
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
-}
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 export async function updateFullProfileAction(formData: FormData) {
   const user = await getCurrentUser();
@@ -61,14 +57,14 @@ export async function updateFullProfileAction(formData: FormData) {
     if (!currentPassword) {
       return { success: false, error: "Debes ingresar tu contraseña actual para cambiarla." };
     }
-    const currentHash = hashPassword(currentPassword);
-    if (user.passwordHash !== "demo_hash" && user.passwordHash !== currentHash) {
+    const isCurrentValid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!isCurrentValid) {
       return { success: false, error: "La contraseña actual es incorrecta." };
     }
     if (newPassword.length < 6) {
       return { success: false, error: "La nueva contraseña debe tener al menos 6 caracteres." };
     }
-    updateData.passwordHash = hashPassword(newPassword);
+    updateData.passwordHash = await hashPassword(newPassword);
   }
 
   try {

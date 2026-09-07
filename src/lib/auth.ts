@@ -168,12 +168,16 @@ export async function getCurrentUserWithStatus(): Promise<SessionStatus> {
         }
       }
     }
-  } catch {
-    // If DB is unreachable, fallback gracefully to mock dev user
+  } catch (err) {
+    console.error("Auth session lookup error:", err);
   }
 
-  // Graceful fallback for UI testing and navigation across all views
-  return { user: MOCK_DEV_USER, suspended: null };
+  // Only allow mock user if explicitly requested for dev mock testing
+  if (process.env.ALLOW_DEV_MOCK === "true" && process.env.NODE_ENV !== "production") {
+    return { user: MOCK_DEV_USER, suspended: null };
+  }
+
+  return { user: null, suspended: null };
 }
 
 export async function getCurrentUser() {

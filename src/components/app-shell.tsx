@@ -10,6 +10,7 @@ import {
   IconLogout,
   IconBell,
 } from "@/components/icons";
+import { PillDock } from "@/components/pill-dock";
 
 export function AppShell({
   user,
@@ -108,6 +109,8 @@ export function AppShell({
 
       {/* Main Full-Width Content Container */}
       <main className="flex-1 w-full">{children}</main>
+      {/* Dynamic Role-Aware Navigation Pill Dock */}
+      <PillDock userRole={user.role} />
     </div>
   );
 }

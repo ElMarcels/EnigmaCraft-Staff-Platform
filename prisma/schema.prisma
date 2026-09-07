@@ -62,6 +62,8 @@ model User {
   directMessagesSent DirectMessage[]    @relation("DmSender")
   directMessagesRcvd DirectMessage[]    @relation("DmRecipient")
   announcementReads  AnnouncementRead[]
+  ticketsAuthored    Ticket[]           @relation("TicketAuthor")
+  ticketsAssigned    Ticket[]           @relation("TicketAssignee")
 }
 
 model ChannelCategory {
@@ -222,3 +224,49 @@ model AuditLog {
   @@index([userId])
   @@index([action])
 }
+
+enum TicketCategory {
+  HACKS
+  BUG
+  TOXICITY
+  APPEAL
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id           String         @id @default(cuid())
+  title        String
+  description  String
+  category     TicketCategory @default(HACKS)
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  targetPlayer String?
+  proofUrl     String?
+  authorId     String
+  author       User           @relation("TicketAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTo   User?          @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  resolution   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([authorId])
+  @@index([assignedToId])
+}
+

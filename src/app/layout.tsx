@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { AmbientParticles } from "@/components/ambient-particles";
-import { PillDock } from "@/components/pill-dock";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,7 +35,6 @@ export default function RootLayout({
       <body className="min-h-full bg-background text-foreground antialiased selection:bg-rose-500/30 selection:text-rose-200 relative pb-16 lg:pb-0">
         <AmbientParticles />
         <div className="relative z-10">{children}</div>
-        <PillDock />
         <Toaster
           theme="dark"
           richColors

@@ -30,10 +30,12 @@ export async function createUserAction(
   const exists = await prisma.user.findUnique({ where: { username } });
   if (exists) return { error: "Ese usuario ya existe" };
 
+  const hashedPassword = await hashPassword(password);
+
   const created = await prisma.user.create({
     data: {
       username,
-      passwordHash: hashPassword(password),
+      passwordHash: hashedPassword,
       displayName,
       role,
       createdById: founder.id,
@@ -239,9 +241,10 @@ export async function resetUserPassword(formData: FormData) {
   const target = await prisma.user.findUnique({ where: { id: targetId } });
   if (!target) return;
 
+  const hashedPassword = await hashPassword(newPassword);
   await prisma.user.update({
     where: { id: targetId },
-    data: { passwordHash: hashPassword(newPassword) },
+    data: { passwordHash: hashedPassword },
   });
   await audit({
     userId: founder.id,
@@ -282,13 +285,15 @@ export async function changeOwnPasswordAction(
   const user = await getCurrentUserOrThrow();
   const current = String(formData.get("current") || "");
   const next = String(formData.get("newPassword") || "");
-  if (!verifyPassword(current, user.passwordHash)) {
+  const isValid = await verifyPassword(current, user.passwordHash);
+  if (!isValid) {
     return { error: "La contraseña actual no es correcta" };
   }
   if (next.length < 6) return { error: "La nueva contraseña debe tener al menos 6 caracteres" };
+  const hashedPassword = await hashPassword(next);
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: hashPassword(next) },
+    data: { passwordHash: hashedPassword },
   });
   await audit({ userId: user.id, action: "PASSWORD_CHANGE" });
   redirect("/dashboard");

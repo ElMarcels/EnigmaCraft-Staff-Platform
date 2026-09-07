@@ -259,20 +259,86 @@ function RenderMessageContent({
 export function MessageList({
   messages,
   currentUserId,
+  channelId,
+  channelName,
 }: {
   messages: MessageDTO[];
   currentUserId?: string;
+  channelId?: string;
+  channelName?: string;
 }) {
   const router = useRouter();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState<MessageDTO[]>(messages);
   const [palette, setPalette] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
   const [selectedUserPopover, setSelectedUserPopover] = useState<PopoverUserData | null>(null);
 
   useEffect(() => {
+    setItems(messages);
+  }, [messages]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [items.length]);
+
+  // Real-time background sync
+  useEffect(() => {
+    if (!channelId) return;
+
+    let isMounted = true;
+    const interval = setInterval(async () => {
+      try {
+        const lastMsg = items[items.length - 1];
+        const url = lastMsg
+          ? `/api/chat/${channelId}/messages?since=${encodeURIComponent(lastMsg.createdAt)}`
+          : `/api/chat/${channelId}/messages`;
+
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted || !data.messages || data.messages.length === 0) return;
+
+        setItems((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMessages = data.messages.filter((m: MessageDTO) => !existingIds.has(m.id));
+          if (newMessages.length === 0) return prev;
+
+          // Check if any incoming message is from another user
+          const fromOther = newMessages.some((m: MessageDTO) => m.author.id !== currentUserId);
+          if (fromOther) {
+            sounds.playMessage();
+            if (
+              typeof window !== "undefined" &&
+              "Notification" in window &&
+              Notification.permission === "granted" &&
+              document.hidden
+            ) {
+              const latest = newMessages[newMessages.length - 1];
+              try {
+                new Notification(`Mensaje en #${channelName || "chat"} (${latest.author.displayName})`, {
+                  body: latest.content,
+                  icon: "/favicon.ico",
+                });
+              } catch {
+                // Ignore notification error
+              }
+            }
+          }
+
+          return [...prev, ...newMessages];
+        });
+      } catch {
+        // Silent retry
+      }
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [channelId, channelName, items, currentUserId]);
 
   function react(messageId: string, emoji: string) {
     sounds.playReaction();
@@ -281,7 +347,7 @@ export function MessageList({
   }
 
   function handleUserClickByName(usernameOrDisplay: string) {
-    const targetMsg = messages.find(
+    const targetMsg = items.find(
       (m) =>
         m.author.displayName.toLowerCase() === usernameOrDisplay.toLowerCase() ||
         m.author.id === usernameOrDisplay
@@ -302,7 +368,7 @@ export function MessageList({
     }
   }
 
-  if (messages.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl theme-icon-box mb-3">
@@ -351,9 +417,9 @@ export function MessageList({
         </div>
       )}
 
-      {messages.map((msg, index) => {
+      {items.map((msg, index) => {
         const isMe = msg.author.id === currentUserId;
-        const prevMsg = index > 0 ? messages[index - 1] : null;
+        const prevMsg = index > 0 ? items[index - 1] : null;
         const isSameAuthor = prevMsg && prevMsg.author.id === msg.author.id;
         const isWithinFiveMin =
           prevMsg &&

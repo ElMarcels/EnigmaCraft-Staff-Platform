@@ -16,6 +16,7 @@ import {
   IconSettings,
   IconBell,
   IconPlus,
+  IconAlertTriangle,
 } from "@/components/icons";
 
 export type PaletteItem = {
@@ -91,6 +92,17 @@ export function CommandPalette() {
       icon: <IconMegaphone className="h-4 w-4" />,
       action: () => {
         router.push("/announcements");
+        setOpen(false);
+      },
+    },
+    {
+      id: "nav-reports",
+      category: "Navegación",
+      title: "Mesa de Moderación & Reportes",
+      subtitle: "Gestión de hacks, apelaciones e incidencias",
+      icon: <IconAlertTriangle className="h-4 w-4" />,
+      action: () => {
+        router.push("/reports");
         setOpen(false);
       },
     },

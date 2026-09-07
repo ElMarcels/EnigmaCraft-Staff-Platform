@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { sendDm } from "@/actions/messaging";
 import { Avatar } from "@/components/role-badge";
 import { IconSend } from "@/components/icons";
+import { sounds } from "@/lib/sound-effects";
 import type { Role } from "@prisma/client";
 
 export type DmMessageDTO = {
@@ -45,23 +46,59 @@ export function DmThread({
 }) {
   const router = useRouter();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState<DmMessageDTO[]>(messages);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    setItems(messages);
+  }, [messages]);
 
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), 6000);
-    return () => clearInterval(id);
-  }, [router]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [items.length]);
+
+  // Real-time silent DM polling
+  useEffect(() => {
+    let isMounted = true;
+    const interval = setInterval(async () => {
+      try {
+        const last = items[items.length - 1];
+        const url = last
+          ? `/api/dm/${partnerId}/messages?since=${encodeURIComponent(last.createdAt)}`
+          : `/api/dm/${partnerId}/messages`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted || !data.messages || data.messages.length === 0) return;
+
+        setItems((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMsgs = data.messages.filter((m: DmMessageDTO) => !existingIds.has(m.id));
+          if (newMsgs.length === 0) return prev;
+          const fromOther = newMsgs.some((m: DmMessageDTO) => !m.fromMe);
+          if (fromOther) {
+            sounds.playMessage();
+          }
+          return [...prev, ...newMsgs];
+        });
+      } catch {
+        // Silent retry
+      }
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [partnerId, items]);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!text.trim() || pending) return;
     const fd = new FormData(e.currentTarget);
+    const sentText = text;
     startTransition(async () => {
       const res = await sendDm(fd);
       if (res && "error" in res) {
@@ -69,6 +106,7 @@ export function DmThread({
       } else {
         setError(null);
         setText("");
+        // Optimistic append or fast refresh
         router.refresh();
       }
     });
@@ -91,7 +129,7 @@ export function DmThread({
           </div>
         ) : null}
         <div className="flex flex-col gap-0.5">
-          {messages.map((m) => (
+          {items.map((m) => (
             <div
               key={m.id}
               className={`flex gap-3 rounded-lg px-2 py-1 hover:bg-white/[0.04] ${

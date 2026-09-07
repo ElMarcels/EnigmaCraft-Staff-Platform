@@ -141,33 +141,20 @@ export default async function FilesPage({
       include: { owner: true },
     });
 
-    if (dbItems.length > 0) {
-      items = dbItems.map((i) => ({
-        id: i.id,
-        name: i.name,
-        isFolder: i.isFolder,
-        size: i.size,
-        mimeType: i.mimeType || "application/octet-stream",
-        createdAt: i.createdAt.toISOString(),
-        ownerName: i.owner?.displayName || "—",
-        ownerId: i.ownerId || "",
-        url: i.url,
-      }));
-    } else if (!rootId) {
-      // Show default root starter templates only if database has 0 items at root
-      items = ROOT_DEMO_ITEMS.map((d) => ({
-        ...d,
-        url: null,
-      }));
-    }
-  } catch {
-    // Fallback
-    if (!rootId) {
-      items = ROOT_DEMO_ITEMS.map((d) => ({
-        ...d,
-        url: null,
-      }));
-    }
+    items = dbItems.map((i) => ({
+      id: i.id,
+      name: i.name,
+      isFolder: i.isFolder,
+      size: i.size,
+      mimeType: i.mimeType || "application/octet-stream",
+      createdAt: i.createdAt.toISOString(),
+      ownerName: i.owner?.displayName || "—",
+      ownerId: i.ownerId || "",
+      url: i.url,
+    }));
+  } catch (err) {
+    console.error("Error reading file nodes from database:", err);
+    items = [];
   }
 
   let totalUsedBytes = items.reduce((acc, it) => acc + (it.size || 0), 0);

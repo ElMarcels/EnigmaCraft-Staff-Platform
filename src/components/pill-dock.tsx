@@ -12,16 +12,25 @@ import {
   IconContact,
   IconShield,
   IconSettings,
+  IconAlertTriangle,
 } from "@/components/icons";
 
-const DOCK_ITEMS = [
+interface DockItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roleRequired?: string;
+}
+
+const DOCK_ITEMS: DockItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: IconDashboard },
   { href: "/chat", label: "Chat Staff", icon: IconChat },
   { href: "/dm", label: "Mensajes", icon: IconMail },
+  { href: "/reports", label: "Reportes", icon: IconAlertTriangle },
   { href: "/files", label: "Drive", icon: IconFolder },
   { href: "/announcements", label: "Anuncios", icon: IconMegaphone },
   { href: "/directory", label: "Directorio", icon: IconContact },
-  { href: "/founder", label: "Fundador", icon: IconShield },
+  { href: "/founder", label: "Fundador", icon: IconShield, roleRequired: "FOUNDER" },
   { href: "/settings", label: "Ajustes", icon: IconSettings },
 ];
 
@@ -61,15 +70,24 @@ function TypewriterText({ text, active }: { text: string; active: boolean }) {
   );
 }
 
-export function PillDock() {
+export function PillDock({ userRole }: { userRole?: string }) {
   const pathname = usePathname();
 
-  // Hide dock on login page
-  if (pathname === "/login") return null;
+  // Hide dock on auth/system pages
+  if (pathname === "/login" || pathname === "/suspended" || pathname === "/onboarding") {
+    return null;
+  }
+
+  const items = DOCK_ITEMS.filter((item) => {
+    if (item.roleRequired && item.roleRequired !== userRole) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <nav className="pill-dock" aria-label="Navegación Reactiva">
-      {DOCK_ITEMS.map((item) => {
+      {items.map((item) => {
         const active =
           pathname === item.href ||
           (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));

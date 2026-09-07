@@ -298,4 +298,26 @@ export const IconRefresh = ({ className }: IconProps) => (
   </svg>
 );
 
+export const IconUser = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+export const IconExternalLink = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
+
+export const IconFilter = ({ className }: IconProps) => (
+  <svg {...base(className)}>
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </svg>
+);
+
+
 

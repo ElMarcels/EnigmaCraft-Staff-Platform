@@ -11,6 +11,8 @@ import {
   IconArrowRight,
 } from "@/components/icons";
 import { statusOf } from "@/lib/role-meta";
+import { ServerStatusWidget } from "@/components/server-status-widget";
+import { MinecraftPlayerLookup } from "@/components/minecraft-player-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +217,9 @@ export default async function DashboardPage() {
         })}
       </div>
 
+      {/* Live Minecraft Cluster & Server Status Widget */}
+      <ServerStatusWidget />
+
       {/* Online Staff and Recent Announcements Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* En línea ahora */}
@@ -327,6 +332,9 @@ export default async function DashboardPage() {
           )}
         </section>
       </div>
+
+      {/* Staff In-Game Player Lookup & Moderation Toolkit */}
+      <MinecraftPlayerLookup />
     </div>
   );
 }

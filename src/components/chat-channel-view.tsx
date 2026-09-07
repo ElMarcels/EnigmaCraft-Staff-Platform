@@ -60,7 +60,12 @@ export function ChatChannelView({
 
         {/* Message Feed */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <MessageList messages={messages} currentUserId={currentUserId} />
+          <MessageList
+            messages={messages}
+            currentUserId={currentUserId}
+            channelId={channel.id}
+            channelName={channel.name}
+          />
         </div>
 
         {/* Message Composer */}

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 import { createSession, destroySession, getCurrentUserWithStatus } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 
@@ -19,10 +20,21 @@ export async function loginAction(
     return { error: "Usuario y contraseña son obligatorios." };
   }
 
+  const rateLimitKey = `login:${username.toLowerCase()}`;
+  const rateLimit = checkRateLimit(rateLimitKey, 5, 10 * 60 * 1000);
+  if (!rateLimit.allowed) {
+    return {
+      error: `Demasiados intentos fallidos. Inténtalo de nuevo en ${Math.ceil(rateLimit.resetInSeconds / 60)} minutos.`,
+    };
+  }
+
   const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !verifyPassword(password, user.passwordHash)) {
+  const valid = user ? await verifyPassword(password, user.passwordHash) : false;
+  if (!user || !valid) {
     return { error: "Credenciales incorrectas." };
   }
+
+  resetRateLimit(rateLimitKey);
 
   await createSession(user.id);
 
