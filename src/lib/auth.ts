@@ -140,6 +140,9 @@ export function hasContactInfo(
 }
 
 export function suspensionInfoFor(user: User): SuspensionInfo | null {
+  if (user.role === "FOUNDER" || user.username?.toLowerCase() === "mortal_pirata107") {
+    return null;
+  }
   if (user.active) return null;
   if (user.suspendedUntil && user.suspendedUntil.getTime() <= Date.now()) {
     return null;

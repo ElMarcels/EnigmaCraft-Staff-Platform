@@ -16,15 +16,24 @@ export async function GET() {
   let dbError = null;
   let userCount = -1;
   let hasMortalUser = false;
+  let mortalUser: any = null;
 
   try {
     userCount = await prisma.user.count();
     dbStatus = "connected";
-    const mortal = await prisma.user.findUnique({
+    mortalUser = await prisma.user.findUnique({
       where: { username: "mortal_pirata107" },
-      select: { id: true, username: true, role: true, displayName: true },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        displayName: true,
+        active: true,
+        suspendedUntil: true,
+        contactDiscord: true,
+      },
     });
-    hasMortalUser = Boolean(mortal);
+    hasMortalUser = Boolean(mortalUser);
   } catch (err: unknown) {
     dbStatus = "error";
     dbError = (err as Error)?.message || String(err);
@@ -37,6 +46,7 @@ export async function GET() {
     dbError,
     userCount,
     hasMortalUser,
+    mortalUser,
     timestamp: new Date().toISOString(),
   });
 }

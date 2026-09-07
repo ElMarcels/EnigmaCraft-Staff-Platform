@@ -65,22 +65,27 @@ export async function loginAction(
         } catch (createErr) {
           console.warn("Could not auto-create founder in DB, falling back to in-memory session:", createErr);
         }
-      }
-
-      const targetUserId = user?.id || "founder-mortal-107";
-      resetRateLimit(rateLimitKey);
-      await createSession(targetUserId);
-
-      if (user?.id && dbAvailable) {
+      } else if (dbAvailable && user) {
         try {
-          await prisma.user.update({
+          user = await prisma.user.update({
             where: { id: user.id },
-            data: { lastSeenAt: new Date() },
+            data: {
+              active: true,
+              role: "FOUNDER",
+              contactDiscord: user.contactDiscord || "mortal_pirata107",
+              lastSeenAt: new Date(),
+              suspendedUntil: null,
+              suspensionReason: null,
+            },
           });
         } catch {
           // Non-blocking
         }
       }
+
+      const targetUserId = user?.id || "founder-mortal-107";
+      resetRateLimit(rateLimitKey);
+      await createSession(targetUserId);
 
       redirect("/dashboard");
     }
