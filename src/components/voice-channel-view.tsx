@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { sounds } from "@/lib/sound-effects";
 import { Avatar, RoleBadge } from "@/components/role-badge";
@@ -19,6 +20,7 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconBell,
+  IconExternalLink,
 } from "@/components/icons";
 import { ChannelMemberDTO } from "@/components/channel-members-sidebar";
 import { MessageDTO, MessageList } from "@/components/message-list";
@@ -50,6 +52,7 @@ export function VoiceChannelView({
     updateSettings,
   } = useVoiceCall();
 
+  const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
@@ -70,14 +73,22 @@ export function VoiceChannelView({
   const isDeafened = activeCall?.isDeafened ?? false;
   const isScreenSharing = activeCall?.isScreenSharing ?? false;
 
+  function handleMinimizeToPip() {
+    sounds.playPop();
+    toast.info("Llamada minimizada a PiP", {
+      description: "El audio y la ventana flotante continúan en la esquina superior mientras navegas.",
+    });
+    router.push("/dashboard");
+  }
+
   function handleSoundboard(soundName: string) {
     sounds.playPop();
     toast(`Efecto de audio emitido: ${soundName}`, { icon: "🔔" });
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#05070d]/90 relative overflow-hidden select-none">
-      {/* Upper Section: Voice Stage (The bubble displaced to the top with rich controls) */}
+    <div className="flex flex-col h-full bg-[#05070d]/90 relative overflow-hidden select-none animate-in fade-in duration-300">
+      {/* Upper Section: Voice Stage (The displaced bubble docked at the top of the chat) */}
       <div className="shrink-0 border-b border-white/[0.08] bg-[#070b14]/95 backdrop-blur-2xl transition-all duration-300 shadow-xl z-20">
         {/* Stage Header */}
         <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between gap-4">
@@ -92,7 +103,7 @@ export function VoiceChannelView({
                 </h2>
                 <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold text-emerald-400 flex items-center gap-1.5 shrink-0">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  {isConnectedHere ? "VOZ EN VIVO (14ms)" : "DESCONECTADO"}
+                  {isConnectedHere ? "BURBUJA ACOPLADA • EN VIVO (14ms)" : "DESCONECTADO"}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 truncate">
@@ -102,6 +113,17 @@ export function VoiceChannelView({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Minimize to floating PiP window */}
+            <button
+              type="button"
+              onClick={handleMinimizeToPip}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] text-slate-300 border border-white/[0.08] hover:text-white hover:bg-white/[0.08] text-xs font-bold transition-all cursor-pointer select-none active:scale-95"
+              title="Continuar en segundo plano con la ventana flotante PiP"
+            >
+              <IconExternalLink className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Minimizar a PiP</span>
+            </button>
+
             {/* Toggle + Más configuraciones */}
             <button
               type="button"
