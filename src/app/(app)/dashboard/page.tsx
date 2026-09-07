@@ -112,9 +112,45 @@ export default async function DashboardPage() {
     // Graceful offline fallback
   }
 
-  const onlineStaff = allStaff.filter(
-    (u) => statusOf({ status: u.status, lastSeenAt: u.lastSeenAt })?.key === "ONLINE"
-  );
+  const safeStaff = allStaff.map((u) => ({
+    id: String(u.id),
+    displayName: String(u.displayName),
+    avatarColor: u.avatarColor || "#f43f5e",
+    role: String(u.role),
+    status: u.status || null,
+    lastSeenAt: u.lastSeenAt
+      ? u.lastSeenAt instanceof Date
+        ? u.lastSeenAt.toISOString()
+        : String(u.lastSeenAt)
+      : null,
+  }));
+
+  const safeOnline = safeStaff.filter((u) => {
+    const raw = allStaff.find((x) => String(x.id) === u.id);
+    return statusOf({ status: raw?.status, lastSeenAt: raw?.lastSeenAt })?.key === "ONLINE";
+  });
+
+  const safeAnnouncements = announcements.map((a) => ({
+    id: String(a.id),
+    title: String(a.title),
+    content: String(a.content),
+    type: a.type || null,
+    serverTarget: a.serverTarget || null,
+    eventDate: a.eventDate
+      ? a.eventDate instanceof Date
+        ? a.eventDate.toISOString()
+        : String(a.eventDate)
+      : null,
+    bannerUrl: a.bannerUrl || null,
+    createdAt:
+      a.createdAt instanceof Date
+        ? a.createdAt.toISOString()
+        : String(a.createdAt),
+    author: {
+      displayName: a.author?.displayName || "Staff",
+      avatarColor: a.author?.avatarColor || "#f43f5e",
+    },
+  }));
 
   const stats = [
     {
@@ -122,7 +158,6 @@ export default async function DashboardPage() {
       value: staffCount,
       sub: "Miembros registrados",
       iconName: "users",
-      icon: IconUsers,
       href: "/directory",
       gradient: "from-white/[0.08] to-transparent",
       iconColor: "theme-text",
@@ -133,7 +168,6 @@ export default async function DashboardPage() {
       value: channelCount,
       sub: `${messageCount} mensajes enviados`,
       iconName: "chat",
-      icon: IconChat,
       href: "/chat",
       gradient: "from-cyan-500/20 to-blue-600/10",
       iconColor: "text-cyan-400",
@@ -144,7 +178,6 @@ export default async function DashboardPage() {
       value: fileCount,
       sub: fileBytes?._sum?.size ? fmtBytes(fileBytes._sum.size) : "0 B",
       iconName: "files",
-      icon: IconFolder,
       href: "/files",
       gradient: "from-emerald-500/20 to-teal-600/10",
       iconColor: "text-emerald-400",
@@ -155,46 +188,10 @@ export default async function DashboardPage() {
       value: backupCount,
       sub: "Copias seguras del sistema",
       iconName: "backup",
-      icon: IconBackup,
       href: "/founder/backups",
       gradient: "from-amber-500/20 to-orange-600/10",
       iconColor: "text-amber-400",
       border: "hover:border-amber-500/40",
-    },
-  ];
-
-  const quickHub = [
-    {
-      title: "Tablón de Anuncios & Eventos",
-      desc: "Crear comunicados oficiales, alertas y convocar eventos con cuenta atrás.",
-      icon: IconMegaphone,
-      href: "/announcements",
-      badge: "Oficial",
-      color: "from-rose-500/20 to-rose-600/5 text-rose-400 border-rose-500/30",
-    },
-    {
-      title: "Sala de Guardia (Canal de Voz)",
-      desc: "Entrar directamente a la sala de voz en directo para coordinar al staff.",
-      icon: IconRadio,
-      href: "/chat/voz-guardia",
-      badge: "Voz en Vivo",
-      color: "from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/30",
-    },
-    {
-      title: "Normativa & Protocolos",
-      desc: "Consultar las directrices de moderación, sanciones y código de conducta.",
-      icon: IconShield,
-      href: "/chat/normativa-staff",
-      badge: "Reglas",
-      color: "from-cyan-500/20 to-blue-600/5 text-cyan-400 border-cyan-500/30",
-    },
-    {
-      title: "Directorio & Equipo",
-      desc: "Ver todos los miembros del equipo, roles, horarios y Discord.",
-      icon: IconUsers,
-      href: "/directory",
-      badge: "Equipo",
-      color: "from-purple-500/20 to-indigo-600/5 text-purple-400 border-purple-500/30",
     },
   ];
 
@@ -246,7 +243,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Grid of Metric Glass Cards (Functional Interactive Modals with Live Data) */}
-      <InteractiveMetricCards stats={stats} staffList={allStaff} />
+      <InteractiveMetricCards stats={stats} staffList={safeStaff} />
 
       {/* Centro de Operaciones & Accesos Rápidos del Staff (Direct Voice PiP Launch & Interactive Modals) */}
       <InteractiveOperationsHub
@@ -255,8 +252,8 @@ export default async function DashboardPage() {
 
       {/* Online Staff and Recent Announcements Split View (Interactive Functional Widgets) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <InteractiveOnlineStaff staff={onlineStaff} />
-        <InteractiveRecentAnnouncements announcements={announcements} />
+        <InteractiveOnlineStaff staff={safeOnline} />
+        <InteractiveRecentAnnouncements announcements={safeAnnouncements} />
       </div>
 
       {/* Estado Operativo de la Plataforma (Interactive Functional Diagnostic Tools) */}
