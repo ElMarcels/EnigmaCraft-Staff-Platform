@@ -17,6 +17,11 @@ import {
   IconCheck,
 } from "@/components/icons";
 import { statusOf } from "@/lib/role-meta";
+import {
+  InteractiveOnlineStaff,
+  InteractiveRecentAnnouncements,
+  InteractivePlatformHealth,
+} from "@/components/interactive-dashboard-widgets";
 
 export const dynamic = "force-dynamic";
 
@@ -188,7 +193,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto pb-28">
+    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto pb-48">
       {/* Welcome Hero Banner */}
       <div className="glass-card relative overflow-hidden p-6 md:p-8">
         <div
@@ -309,166 +314,14 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Online Staff and Recent Announcements Split View */}
+      {/* Online Staff and Recent Announcements Split View (Interactive Functional Widgets) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* En línea ahora */}
-        <section className="lg:col-span-1 glass-card p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="flex items-center gap-2.5 text-base font-bold text-white">
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
-              </span>
-              Staff en Línea ({onlineStaff.length})
-            </h2>
-            <Link href="/directory" className="text-xs font-semibold theme-link">
-              Ver todos
-            </Link>
-          </div>
-
-          {onlineStaff.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-slate-400 text-xs">
-              <p>No hay otros miembros conectados en este momento.</p>
-            </div>
-          ) : (
-            <div className="space-y-2.5 overflow-y-auto max-h-[340px] pr-1">
-              {onlineStaff.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/directory`}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] transition-all hover:translate-x-1 duration-150"
-                >
-                  <Avatar
-                    name={m.displayName}
-                    color={m.avatarColor}
-                    isOnline={true}
-                    className="h-9 w-9 text-xs"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-white">
-                      {m.displayName}
-                    </div>
-                    <div className="text-[11px] text-slate-400">
-                      <RoleBadge role={m.role} showDot={false} className="py-0 px-2 text-[10px]" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Tablón de Anuncios y Eventos Oficiales */}
-        <section className="lg:col-span-2 glass-card p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="flex items-center gap-2.5 text-base font-bold text-white">
-              <IconMegaphone className="h-5 w-5 theme-text" />
-              Últimos Avisos y Eventos
-            </h2>
-            <Link href="/announcements" className="text-xs font-semibold theme-link">
-              Ver tablón completo
-            </Link>
-          </div>
-
-          {announcements.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-slate-400 text-xs">
-              <p>Aún no se han publicado comunicados en el tablón.</p>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {announcements.map((a) => (
-                <div
-                  key={a.id}
-                  className="glass-card-interactive p-4 flex flex-col justify-between rounded-2xl"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="rounded-md theme-badge px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                        {a.type || "Comunicado"}
-                      </span>
-                      <span className="text-[11px] font-medium text-slate-400">
-                        {new Date(a.createdAt).toLocaleDateString("es-ES", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-sm text-white line-clamp-1 mb-1.5">{a.title}</h3>
-                    <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed">
-                      {a.content}
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-400">
-                    <span className="truncate">Por {a.author.displayName}</span>
-                    <Link
-                      href="/announcements"
-                      className="theme-link font-medium inline-flex items-center gap-1"
-                    >
-                      Ver <IconArrowRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <InteractiveOnlineStaff staff={onlineStaff} />
+        <InteractiveRecentAnnouncements announcements={announcements} />
       </div>
 
-      {/* Estado Operativo de la Plataforma (100% Autónomo - Sin necesidad de servidor externo) */}
-      <section className="glass-card p-6 rounded-3xl border border-white/[0.08] bg-white/[0.01]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Estado de la Plataforma Staff
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Todos los módulos internos se ejecutan de forma autónoma sin dependencias externas.
-            </p>
-          </div>
-          <span className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            Sistemas 100% Operativos
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
-          <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1">
-              Canales y Chat
-            </span>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-              <IconCheck className="h-4 w-4 text-emerald-400" /> Activos (10 Canales)
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1">
-              Salas de Voz Staff
-            </span>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-              <IconCheck className="h-4 w-4 text-emerald-400" /> Listo (WebRTC Stage)
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1">
-              Tablón de Anuncios
-            </span>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-              <IconCheck className="h-4 w-4 text-emerald-400" /> Conectado a #anuncios
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1">
-              Almacenamiento Drive
-            </span>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-              <IconCheck className="h-4 w-4 text-emerald-400" /> Sincronizado
-            </span>
-          </div>
-        </div>
-      </section>
+      {/* Estado Operativo de la Plataforma (Interactive Functional Diagnostic Tools) */}
+      <InteractivePlatformHealth />
     </div>
   );
 }

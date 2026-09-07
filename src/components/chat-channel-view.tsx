@@ -29,6 +29,7 @@ export function ChatChannelView({
         userDisplayName={userDisplayName}
         currentUserId={currentUserId}
         members={members}
+        messages={messages}
       />
     );
   }
