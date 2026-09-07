@@ -36,11 +36,23 @@ export interface ActiveCallState {
   participants: VoiceParticipant[];
 }
 
+export interface VoiceMemberInput {
+  id: string;
+  displayName: string;
+  role: string;
+  avatarColor?: string | null;
+  minecraftNick?: string;
+}
+
 interface VoiceContextType {
   activeCall: ActiveCallState | null;
   speakingIndex: number | null;
   settings: VoiceSettings;
-  joinCall: (channel: { id: string; name: string; categoryName?: string }, user?: { id: string; displayName: string; role: string; avatarColor?: string | null }) => void;
+  joinCall: (
+    channel: { id: string; name: string; categoryName?: string },
+    user?: VoiceMemberInput,
+    otherMembers?: VoiceMemberInput[]
+  ) => void;
   leaveCall: () => void;
   toggleMute: () => void;
   toggleDeafen: () => void;
@@ -75,15 +87,84 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   function joinCall(
     channel: { id: string; name: string; categoryName?: string },
-    currentUser?: { id: string; displayName: string; role: string; avatarColor?: string | null }
+    currentUser?: VoiceMemberInput,
+    otherMembers?: VoiceMemberInput[]
   ) {
     sounds.playSuccess();
     const myUser = currentUser || {
       id: "me",
-      displayName: "Staff Member",
+      displayName: "mortal_pirata107",
       role: "FOUNDER",
       avatarColor: "#f43f5e",
     };
+
+    const extraParticipants: VoiceParticipant[] =
+      otherMembers && otherMembers.length > 0
+        ? otherMembers
+            .filter((m) => m.id !== myUser.id && m.displayName !== myUser.displayName)
+            .slice(0, 5)
+            .map((m, i) => ({
+              id: m.id,
+              name: m.displayName,
+              username: m.displayName.toLowerCase().replace(/\s+/g, "_"),
+              minecraftNick: m.minecraftNick || m.displayName,
+              role: m.role,
+              avatarColor: m.avatarColor || "#f43f5e",
+              isMuted: i === 1,
+              isDeafened: false,
+              isSpeaking: false,
+              ping: 14 + i * 3,
+            }))
+        : [
+            {
+              id: "elmarcels",
+              name: "ElMarcels",
+              username: "elmarcels",
+              minecraftNick: "ElMarcels",
+              role: "FOUNDER",
+              avatarColor: "#f43f5e",
+              isMuted: false,
+              isDeafened: false,
+              isSpeaking: false,
+              ping: 14,
+            },
+            {
+              id: "ale256",
+              name: "Ale256",
+              username: "ale256",
+              minecraftNick: "Ale256",
+              role: "FOUNDER",
+              avatarColor: "#f59e0b",
+              isMuted: false,
+              isDeafened: false,
+              isSpeaking: false,
+              ping: 18,
+            },
+            {
+              id: "mamut_feliz",
+              name: "Mamut_Feliz",
+              username: "mamut_feliz",
+              minecraftNick: "Mamut_Feliz",
+              role: "STAFF",
+              avatarColor: "#06b6d4",
+              isMuted: true,
+              isDeafened: false,
+              isSpeaking: false,
+              ping: 22,
+            },
+            {
+              id: "cobaltj",
+              name: "CobaltJ",
+              username: "cobaltj",
+              minecraftNick: "CobaltJ",
+              role: "STAFF",
+              avatarColor: "#10b981",
+              isMuted: false,
+              isDeafened: false,
+              isSpeaking: false,
+              ping: 20,
+            },
+          ];
 
     const initialParticipants: VoiceParticipant[] = [
       {
@@ -98,42 +179,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         isSpeaking: true,
         ping: 14,
       },
-      {
-        id: "alex",
-        name: "AlexAdmin",
-        username: "alexadmin",
-        minecraftNick: "AlexAdmin",
-        role: "ADMIN",
-        avatarColor: "#e11d48",
-        isMuted: false,
-        isDeafened: false,
-        isSpeaking: false,
-        ping: 18,
-      },
-      {
-        id: "lucas",
-        name: "LucasMod",
-        username: "lucasmod",
-        minecraftNick: "LucasMod",
-        role: "MOD",
-        avatarColor: "#06b6d4",
-        isMuted: true,
-        isDeafened: false,
-        isSpeaking: false,
-        ping: 22,
-      },
-      {
-        id: "elena",
-        name: "ElenaBuilder",
-        username: "elenabuilder",
-        minecraftNick: "ElenaBuilder",
-        role: "BUILDER",
-        avatarColor: "#10b981",
-        isMuted: false,
-        isDeafened: false,
-        isSpeaking: false,
-        ping: 16,
-      },
+      ...extraParticipants,
     ];
 
     setActiveCall({

@@ -27,6 +27,7 @@ import {
 } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useVoiceCall } from "@/context/voice-context";
+import { triggerManualBackupAction } from "@/actions/founder";
 
 // --- Types ---
 export interface AnnouncementItem {
@@ -47,10 +48,45 @@ export interface AnnouncementItem {
 export interface OnlineStaffItem {
   id: string;
   displayName: string;
+  username?: string;
   avatarColor?: string | null;
   role: string;
   status?: string | null;
+  contactDiscord?: string | null;
   lastSeenAt?: string | Date | null;
+}
+
+export interface DashboardFileItem {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  url?: string | null;
+  createdAt: string;
+  owner?: {
+    displayName: string;
+    avatarColor?: string | null;
+  };
+}
+
+export interface DashboardBackupItem {
+  id: string;
+  name: string;
+  size: number;
+  status: string;
+  type: string;
+  createdAt: string;
+  creator?: {
+    displayName: string;
+  };
+}
+
+export interface DashboardChannelItem {
+  id: string;
+  name: string;
+  type: string;
+  description?: string | null;
+  categoryName: string;
 }
 
 // --- 1. Interactive Staff in Line Component with Quick Modal ---
@@ -659,18 +695,55 @@ export interface MetricStatItem {
   border: string;
 }
 
+function fmtBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function getFileExtensionBadge(name: string) {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  if (["yml", "yaml"].includes(ext)) {
+    return { label: "YML", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" };
+  }
+  if (["json"].includes(ext)) {
+    return { label: "JSON", color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" };
+  }
+  if (["jar"].includes(ext)) {
+    return { label: "JAR", color: "bg-rose-500/20 text-rose-300 border-rose-500/30" };
+  }
+  if (["schem", "schematic"].includes(ext)) {
+    return { label: "SCHEM", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" };
+  }
+  if (["png", "jpg", "jpeg", "webp"].includes(ext)) {
+    return { label: "IMG", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" };
+  }
+  if (["zip", "tar", "gz"].includes(ext)) {
+    return { label: "ZIP", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" };
+  }
+  return { label: ext.toUpperCase() || "FILE", color: "bg-slate-500/20 text-slate-300 border-slate-500/30" };
+}
+
 export function InteractiveMetricCards({
   stats,
   staffList = [],
+  fileList = [],
+  backupList = [],
+  channelList = [],
+  totalFileBytes = 0,
 }: {
   stats: MetricStatItem[];
   staffList?: OnlineStaffItem[];
+  fileList?: DashboardFileItem[];
+  backupList?: DashboardBackupItem[];
+  channelList?: DashboardChannelItem[];
+  totalFileBytes?: number;
 }) {
   const router = useRouter();
   const { joinCall, activeCall } = useVoiceCall();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
-  const [backupDone, setBackupDone] = useState(false);
 
   function getIcon(name: string) {
     if (name === "users") return IconUsers;
@@ -679,25 +752,19 @@ export function InteractiveMetricCards({
     return IconBackup;
   }
 
-  function handleStartBackup() {
-    sounds.playPop();
-    setIsBackingUp(true);
-    setBackupDone(false);
-    setTimeout(() => {
-      setIsBackingUp(false);
-      setBackupDone(true);
-      sounds.playSuccess();
-      toast.success("Snapshot de base de datos y archivos creado.", {
-        description: "Copia guardada con éxito en el almacenamiento seguro.",
-      });
-    }, 1800);
-  }
-
   function handleConnectVoiceFromCard() {
     sounds.playSuccess();
+    const realStaff = staffList.map((s) => ({
+      id: s.id,
+      displayName: s.displayName,
+      role: s.role,
+      avatarColor: s.avatarColor,
+      minecraftNick: s.displayName,
+    }));
     joinCall(
       { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
-      { id: "founder-mortal", displayName: "mortal_pirata107", role: "FOUNDER" }
+      { id: "founder-mortal", displayName: "mortal_pirata107", role: "FOUNDER" },
+      realStaff
     );
     setActiveModal(null);
     toast.success("¡Conectado a Sala de Guardia!", {
@@ -773,23 +840,51 @@ export function InteractiveMetricCards({
             {/* USERS MODAL CONTENT */}
             {activeModal === "users" && (
               <div className="space-y-3">
-                <p className="text-xs text-slate-400">
-                  Personal registrado en la red EnigmaCraft. Haz clic en un miembro para copiar su Discord o ir al directorio completo.
-                </p>
-                <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
-                  {staffList.slice(0, 6).map((m) => (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">
+                    Personal registrado en la red EnigmaCraft ({staffList.length} miembros).
+                  </p>
+                  <span className="text-[10px] font-mono text-emerald-400">● Base de Datos Activa</span>
+                </div>
+                <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                  {staffList.map((m) => (
                     <div
                       key={m.id}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]"
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05] transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar name={m.displayName} color={m.avatarColor} className="h-8 w-8 text-xs" />
+                        <img
+                          src={`https://mc-heads.net/avatar/${encodeURIComponent(m.displayName)}/32`}
+                          alt={m.displayName}
+                          className="h-8 w-8 rounded-lg shadow-sm shrink-0 bg-black/40"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
                         <div className="truncate">
                           <span className="text-xs font-bold text-white block truncate">{m.displayName}</span>
-                          <span className="text-[10px] text-slate-400 truncate">{m.status || "En línea"}</span>
+                          <span className="text-[10px] text-slate-400 truncate">
+                            {m.contactDiscord ? `@${m.contactDiscord}` : `@${m.displayName.toLowerCase()}`} · {m.status || "En línea"}
+                          </span>
                         </div>
                       </div>
-                      <RoleBadge role={m.role} showDot={false} className="text-[9px] py-0 px-2 shrink-0" />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <RoleBadge role={m.role} showDot={false} className="text-[9px] py-0 px-2" />
+                        {m.contactDiscord && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sounds.playPop();
+                              navigator.clipboard.writeText(m.contactDiscord!);
+                              toast.success(`Discord copiado: ${m.contactDiscord}`);
+                            }}
+                            title="Copiar Discord"
+                            className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                          >
+                            <IconCopy className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -821,39 +916,107 @@ export function InteractiveMetricCards({
             {/* CHAT MODAL CONTENT */}
             {activeModal === "chat" && (
               <div className="space-y-3">
-                <p className="text-xs text-slate-400">
-                  Canales de texto y salas de voz activas en tiempo real.
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Texto Principal</span>
-                    <strong className="text-white block mt-0.5">#anuncios, #general</strong>
-                    <span className="text-[10px] text-emerald-400">Sincronizado</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                    <span className="text-rose-300 block text-[10px] uppercase font-bold">Voz en Vivo</span>
-                    <strong className="text-white block mt-0.5">🔊 Sala de Guardia</strong>
-                    <span className="text-[10px] text-emerald-400">WebRTC Opus 64k</span>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">
+                    Canales de texto y salas de voz registrados ({channelList.length} canales).
+                  </p>
+                  <span className="text-[10px] font-mono text-cyan-400">PostgreSQL</span>
                 </div>
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleConnectVoiceFromCard}
-                    className="btn-primary w-full py-2.5 text-xs font-bold justify-center flex items-center gap-2 cursor-pointer shadow-lg shadow-rose-950/40"
-                  >
-                    <IconRadio className="h-4 w-4 animate-pulse" />
-                    <span>Conectar a Sala de Guardia de Voz (PiP)</span>
-                  </button>
+
+                <div className="space-y-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                  {channelList.length === 0 ? (
+                    <div className="p-4 text-center rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-slate-400">
+                      No hay canales creados aún en la base de datos.
+                    </div>
+                  ) : (
+                    channelList.map((ch) => {
+                      const isVoice = ch.type === "VOICE" || ch.name.toLowerCase().includes("voz");
+                      return (
+                        <div
+                          key={ch.id}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                            isVoice
+                              ? "bg-rose-500/[0.06] border-rose-500/20 hover:bg-rose-500/10 hover:border-rose-500/30"
+                              : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs shrink-0 ${
+                                isVoice ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.06] text-slate-300 font-mono"
+                              }`}
+                            >
+                              {isVoice ? <IconRadio className="h-3.5 w-3.5" /> : "#"}
+                            </span>
+                            <div className="truncate">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-white truncate">{ch.name}</span>
+                                <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-400 font-mono">
+                                  {ch.categoryName}
+                                </span>
+                              </div>
+                              {ch.description && (
+                                <span className="text-[10px] text-slate-400 truncate block">{ch.description}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isVoice ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  sounds.playSuccess();
+                                  joinCall(
+                                    { id: ch.id, name: ch.name, categoryName: ch.categoryName },
+                                    { id: "me", displayName: "mortal_pirata107", role: "FOUNDER" },
+                                    staffList.map((s) => ({
+                                      id: s.id,
+                                      displayName: s.displayName,
+                                      role: s.role,
+                                      avatarColor: s.avatarColor,
+                                      minecraftNick: s.displayName,
+                                    }))
+                                  );
+                                  setActiveModal(null);
+                                  toast.success(`¡Conectado a ${ch.name}!`, {
+                                    description: "Ventana flotante PiP activa con skins de Minecraft.",
+                                  });
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-sm shadow-rose-950/40"
+                              >
+                                <IconRadio className="h-3 w-3" />
+                                <span>Conectar PiP</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveModal(null);
+                                  router.push(`/chat/${ch.id}`);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/10 text-slate-200 text-[11px] font-semibold transition-colors cursor-pointer"
+                              >
+                                Abrir →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-white/[0.06]">
                   <button
                     type="button"
                     onClick={() => {
                       setActiveModal(null);
                       router.push("/chat");
                     }}
-                    className="btn-secondary w-full py-2 text-xs font-semibold justify-center cursor-pointer"
+                    className="btn-primary flex-1 py-2 text-xs font-bold justify-center cursor-pointer"
                   >
-                    Abrir Canales de Texto
+                    Ir al Centro de Canales
                   </button>
                 </div>
               </div>
@@ -862,31 +1025,96 @@ export function InteractiveMetricCards({
             {/* FILES MODAL CONTENT */}
             {activeModal === "files" && (
               <div className="space-y-3 text-xs">
-                <p className="text-slate-400">
-                  Almacenamiento en la nube para esquemáticos, plugins y configuraciones.
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-slate-400">
+                    Archivos de configuración, plugins y esquemáticos en EnigmaDrive.
+                  </p>
+                  <span className="text-[10px] font-mono text-emerald-400">Almacenamiento Seguro</span>
+                </div>
+
+                {/* Real Storage Quota Usage Bar */}
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Espacio utilizado:</span>
-                    <strong className="text-white font-mono">15.0 MB / 5.0 GB</strong>
+                    <span className="text-slate-400">Espacio Real Utilizado:</span>
+                    <strong className="text-white font-mono">
+                      {fmtBytes(totalFileBytes)} / 5.0 GB
+                    </strong>
                   </div>
                   <div className="w-full bg-white/[0.08] h-2 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-rose-500 to-red-600 h-full w-[1.5%]" />
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, Math.max(1, (totalFileBytes / (5 * 1024 * 1024 * 1024)) * 100))}%`,
+                      }}
+                    />
                   </div>
                   <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                    <span>99.7% libre</span>
-                    <span>Alta disponibilidad</span>
+                    <span>{fileList.length} archivos almacenados</span>
+                    <span>Cifrado en reposo</span>
                   </div>
                 </div>
+
+                {/* Real Files List from Database */}
+                <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                  {fileList.length === 0 ? (
+                    <div className="p-4 text-center rounded-xl bg-white/[0.02] border border-dashed border-white/10 space-y-2">
+                      <IconFolder className="h-6 w-6 text-slate-500 mx-auto" />
+                      <p className="text-slate-400 font-medium">Aún no hay archivos subidos en EnigmaDrive.</p>
+                      <p className="text-[11px] text-slate-500">
+                        Sube esquemáticos (.schem), plugins (.jar), o configs (.yml) desde el explorador.
+                      </p>
+                    </div>
+                  ) : (
+                    fileList.map((f) => {
+                      const badge = getFileExtensionBadge(f.name);
+                      return (
+                        <div
+                          key={f.id}
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span
+                              className={`text-[10px] font-mono font-black px-2 py-1 rounded-lg border shrink-0 ${badge.color}`}
+                            >
+                              {badge.label}
+                            </span>
+                            <div className="truncate">
+                              <span className="text-xs font-bold text-white block truncate">{f.name}</span>
+                              <span className="text-[10px] text-slate-400 truncate block">
+                                {fmtBytes(f.size)} · Subido por {f.owner?.displayName || "Staff"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {f.url ? (
+                              <a
+                                href={f.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                download
+                                className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                title="Descargar archivo"
+                              >
+                                <IconExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => {
                     setActiveModal(null);
                     router.push("/files");
                   }}
-                  className="btn-primary w-full py-2.5 text-xs font-bold justify-center cursor-pointer"
+                  className="btn-primary w-full py-2.5 text-xs font-bold justify-center cursor-pointer flex items-center gap-2"
                 >
-                  Abrir Explorador de Archivos
+                  <IconFolder className="h-4 w-4" />
+                  <span>Abrir Explorador Completo de EnigmaDrive</span>
                 </button>
               </div>
             )}
@@ -894,39 +1122,112 @@ export function InteractiveMetricCards({
             {/* BACKUP MODAL CONTENT */}
             {activeModal === "backup" && (
               <div className="space-y-3 text-xs">
-                <p className="text-slate-400">
-                  Copias de seguridad del sistema y snapshot de base de datos PostgreSQL.
-                </p>
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Estado del sistema:</span>
-                    <strong className="text-emerald-400">Copias Seguras y Cifradas</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Frecuencia automática:</span>
-                    <strong className="text-white">Cada 6 horas</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Último snapshot:</span>
-                    <strong className="text-slate-300 font-mono">Hace 2 horas (Automático)</strong>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-slate-400">
+                    Copias de seguridad del sistema y snapshot de base de datos PostgreSQL.
+                  </p>
+                  <span className="text-[10px] font-mono text-amber-400">Vercel Postgres + Blob</span>
                 </div>
 
-                <div className="pt-1">
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Estado de respaldos:</span>
+                    <strong className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {backupList.length > 0 ? "Activo y Sincronizado" : "Sin copias previas"}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Total de snapshots:</span>
+                    <strong className="text-white font-mono">{backupList.length} copias registradas</strong>
+                  </div>
+                  {backupList[0] && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Última copia:</span>
+                      <strong className="text-slate-300 font-mono truncate max-w-[200px]">
+                        {backupList[0].name}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+
+                {/* Real Backups List from Database */}
+                <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                  {backupList.length === 0 ? (
+                    <div className="p-4 text-center rounded-xl bg-white/[0.02] border border-dashed border-white/10 text-slate-400 text-xs">
+                      Aún no se ha generado ninguna copia de seguridad. Pulsa el botón inferior para crear la primera.
+                    </div>
+                  ) : (
+                    backupList.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-white font-mono truncate">{b.name}</span>
+                            <span
+                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                b.type === "automatic"
+                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  : "bg-cyan-500/20 text-cyan-300"
+                              }`}
+                            >
+                              {b.type === "automatic" ? "Auto" : "Manual"}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {fmtBytes(b.size)} · Por {b.creator?.displayName || "Sistema"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-emerald-400 shrink-0">
+                          ✓ {b.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="pt-1 space-y-2">
                   <button
                     type="button"
                     disabled={isBackingUp}
-                    onClick={handleStartBackup}
+                    onClick={async () => {
+                      sounds.playPop();
+                      setIsBackingUp(true);
+                      try {
+                        const res = await triggerManualBackupAction();
+                        if (res.success) {
+                          sounds.playSuccess();
+                          toast.success("Copia de seguridad creada correctamente", {
+                            description: `Archivo guardado: ${res.name}`,
+                          });
+                          router.refresh();
+                        } else {
+                          toast.error(res.error || "No se pudo generar el respaldo");
+                        }
+                      } catch (err: any) {
+                        toast.error(err?.message || "Error al invocar respaldo");
+                      } finally {
+                        setIsBackingUp(false);
+                      }
+                    }}
                     className="btn-primary w-full py-2.5 text-xs font-bold justify-center flex items-center gap-2 cursor-pointer shadow-lg shadow-rose-950/40"
                   >
                     <IconBackup className={`h-4 w-4 ${isBackingUp ? "animate-spin" : ""}`} />
-                    <span>{isBackingUp ? "Creando copia de seguridad..." : "⚡ Crear Respaldo Inmediato"}</span>
+                    <span>{isBackingUp ? "Generando snapshot en la base de datos..." : "⚡ Crear Respaldo Inmediato"}</span>
                   </button>
-                  {backupDone && (
-                    <p className="text-[11px] text-emerald-400 text-center mt-2 font-semibold animate-in fade-in">
-                      ✓ Respaldo creado correctamente en el almacenamiento seguro.
-                    </p>
-                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      router.push("/founder/backups");
+                    }}
+                    className="btn-secondary w-full py-2 text-xs font-semibold justify-center cursor-pointer"
+                  >
+                    Ver Panel Avanzado de Backups
+                  </button>
                 </div>
               </div>
             )}
@@ -940,8 +1241,10 @@ export function InteractiveMetricCards({
 // --- 5. Interactive Operations Hub with Voice PiP Launch & Protocols ---
 export function InteractiveOperationsHub({
   currentUser,
+  staffList = [],
 }: {
   currentUser?: { id: string; displayName: string; role: string } | null;
+  staffList?: OnlineStaffItem[];
 }) {
   const router = useRouter();
   const { joinCall, activeCall } = useVoiceCall();
@@ -949,9 +1252,17 @@ export function InteractiveOperationsHub({
 
   function handleDirectVoicePip() {
     sounds.playSuccess();
+    const realStaff = staffList.map((s) => ({
+      id: s.id,
+      displayName: s.displayName,
+      role: s.role,
+      avatarColor: s.avatarColor,
+      minecraftNick: s.displayName,
+    }));
     joinCall(
       { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
-      { id: currentUser?.id || "founder-mortal", displayName: currentUser?.displayName || "mortal_pirata107", role: currentUser?.role || "FOUNDER" }
+      { id: currentUser?.id || "founder-mortal", displayName: currentUser?.displayName || "mortal_pirata107", role: currentUser?.role || "FOUNDER" },
+      realStaff
     );
     toast.success("¡Conectado a Sala de Guardia!", {
       description: "Ventana flotante PiP activa en la esquina superior con las skins de Minecraft.",

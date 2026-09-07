@@ -58,15 +58,25 @@ export function VoiceChannelView({
 
   const isConnectedHere = activeCall?.isConnected && activeCall.channelId === channel.id;
 
-  // Auto-connect to this voice channel if not already in another call
+  // Auto-connect to this voice channel with real team members
   useEffect(() => {
-    if (!activeCall) {
+    if (!activeCall || activeCall.channelId !== channel.id) {
+      const realOthers = members
+        .filter((m) => m.id !== currentUserId && m.displayName !== userDisplayName)
+        .map((m) => ({
+          id: m.id,
+          displayName: m.displayName,
+          role: m.role,
+          avatarColor: m.avatarColor,
+          minecraftNick: m.displayName,
+        }));
       joinCall(
         { id: channel.id, name: channel.name, categoryName: channel.categoryName },
-        { id: currentUserId || "me", displayName: userDisplayName, role: "FOUNDER" }
+        { id: currentUserId || "me", displayName: userDisplayName, role: "FOUNDER" },
+        realOthers
       );
     }
-  }, [channel.id, channel.name, channel.categoryName, currentUserId, userDisplayName]);
+  }, [channel.id, channel.name, channel.categoryName, currentUserId, userDisplayName, members]);
 
   const participants = activeCall?.participants || [];
   const isMuted = activeCall?.isMuted ?? false;

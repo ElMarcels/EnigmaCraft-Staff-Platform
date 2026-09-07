@@ -276,6 +276,22 @@ export async function createBackupAction() {
   const founder = await requireRole("FOUNDER");
   await createBackup({ creatorId: founder.id, type: "manual" });
   revalidatePath("/founder/backups");
+  revalidatePath("/dashboard");
+}
+
+export async function triggerManualBackupAction(): Promise<{ success: boolean; name?: string; error?: string }> {
+  try {
+    const user = await getCurrentUserOrThrow();
+    if (!["FOUNDER", "ADMIN"].includes(user.role)) {
+      return { success: false, error: "Solo Fundadores y Administradores pueden generar respaldos." };
+    }
+    const backup = await createBackup({ creatorId: user.id, type: "manual" });
+    revalidatePath("/dashboard");
+    revalidatePath("/founder/backups");
+    return { success: true, name: backup.name };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Error al crear la copia de seguridad." };
+  }
 }
 
 export async function changeOwnPasswordAction(

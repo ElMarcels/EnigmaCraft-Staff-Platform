@@ -40,9 +40,12 @@ export default async function DashboardPage() {
   let staffCount = 5;
   let channelCount = 12;
   let messageCount = 42;
-  let fileCount = 8;
-  let fileBytes = { _sum: { size: 1024 * 1024 * 18 } };
-  let backupCount = 12;
+  let fileCount = 0;
+  let fileBytes = { _sum: { size: 0 } };
+  let backupCount = 0;
+  let dbFiles: any[] = [];
+  let dbBackups: any[] = [];
+  let dbChannels: any[] = [];
   let announcements: any[] = [
     {
       id: "demo-ann-1",
@@ -51,7 +54,7 @@ export default async function DashboardPage() {
       createdAt: new Date(),
       type: "EVENT",
       serverTarget: "Survival Custom",
-      author: { displayName: "Marcel" },
+      author: { displayName: "ElMarcels" },
     },
     {
       id: "demo-ann-2",
@@ -60,15 +63,15 @@ export default async function DashboardPage() {
       createdAt: new Date(Date.now() - 86400000),
       type: "ANNOUNCEMENT",
       serverTarget: "Toda la Red (Global)",
-      author: { displayName: "AlexAdmin" },
+      author: { displayName: "mortal_pirata107" },
     },
   ];
   let allStaff: any[] = [
-    { id: "1", displayName: "Marcel", avatarColor: "#f43f5e", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
-    { id: "2", displayName: "AlexAdmin", avatarColor: "#e11d48", role: "ADMIN", status: "En línea", lastSeenAt: new Date() },
-    { id: "3", displayName: "LucasMod", avatarColor: "#06b6d4", role: "MOD", status: "Ausente", lastSeenAt: new Date(Date.now() - 3600000) },
-    { id: "4", displayName: "ElenaBuilder", avatarColor: "#10b981", role: "BUILDER", status: "En línea", lastSeenAt: new Date() },
-    { id: "5", displayName: "SofiaStaff", avatarColor: "#a855f7", role: "STAFF", status: "Desconectado", lastSeenAt: new Date(Date.now() - 86400000) },
+    { id: "1", displayName: "mortal_pirata107", username: "mortal_pirata107", avatarColor: "#f43f5e", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
+    { id: "2", displayName: "ElMarcels", username: "elmarcels", avatarColor: "#e11d48", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
+    { id: "3", displayName: "Ale256", username: "ale256", avatarColor: "#f59e0b", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
+    { id: "4", displayName: "Mamut_Feliz", username: "mamut_feliz", avatarColor: "#06b6d4", role: "STAFF", status: "En línea", lastSeenAt: new Date() },
+    { id: "5", displayName: "CobaltJ", username: "cobaltj", avatarColor: "#10b981", role: "STAFF", status: "Ausente", lastSeenAt: new Date(Date.now() - 3600000) },
   ];
 
   try {
@@ -91,11 +94,29 @@ export default async function DashboardPage() {
         select: {
           id: true,
           displayName: true,
+          username: true,
           avatarColor: true,
           role: true,
           status: true,
           lastSeenAt: true,
+          contactDiscord: true,
         },
+      }),
+      prisma.fileNode.findMany({
+        where: { isFolder: false },
+        take: 12,
+        orderBy: { createdAt: "desc" },
+        include: { owner: true },
+      }),
+      prisma.backup.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: { creator: true },
+      }),
+      prisma.channel.findMany({
+        take: 20,
+        orderBy: [{ category: { position: "asc" } }, { position: "asc" }],
+        include: { category: true },
       }),
     ]);
     if (res[0] > 0) {
@@ -107,17 +128,55 @@ export default async function DashboardPage() {
       backupCount = res[5];
       announcements = res[6];
       allStaff = res[7];
+      dbFiles = res[8] || [];
+      dbBackups = res[9] || [];
+      dbChannels = res[10] || [];
     }
   } catch {
     // Graceful offline fallback
   }
 
+  const safeFiles = dbFiles.map((f) => ({
+    id: String(f.id),
+    name: String(f.name),
+    size: Number(f.size || 0),
+    mimeType: f.mimeType || "application/octet-stream",
+    url: f.url || null,
+    createdAt: f.createdAt instanceof Date ? f.createdAt.toISOString() : String(f.createdAt),
+    owner: {
+      displayName: f.owner?.displayName || "Staff",
+      avatarColor: f.owner?.avatarColor || "#6366f1",
+    },
+  }));
+
+  const safeBackups = dbBackups.map((b) => ({
+    id: String(b.id),
+    name: String(b.name),
+    size: Number(b.size || 0),
+    status: String(b.status || "completed"),
+    type: String(b.type || "manual"),
+    createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : String(b.createdAt),
+    creator: {
+      displayName: b.creator?.displayName || "Sistema",
+    },
+  }));
+
+  const safeChannels = dbChannels.map((c) => ({
+    id: String(c.id),
+    name: String(c.name),
+    type: String(c.type || "TEXT"),
+    description: c.description || null,
+    categoryName: c.category?.name || "CANALES",
+  }));
+
   const safeStaff = allStaff.map((u) => ({
     id: String(u.id),
     displayName: String(u.displayName),
+    username: String(u.username || u.displayName),
     avatarColor: u.avatarColor || "#f43f5e",
     role: String(u.role),
     status: u.status || null,
+    contactDiscord: u.contactDiscord || null,
     lastSeenAt: u.lastSeenAt
       ? u.lastSeenAt instanceof Date
         ? u.lastSeenAt.toISOString()
@@ -243,11 +302,19 @@ export default async function DashboardPage() {
       </div>
 
       {/* Grid of Metric Glass Cards (Functional Interactive Modals with Live Data) */}
-      <InteractiveMetricCards stats={stats} staffList={safeStaff} />
+      <InteractiveMetricCards
+        stats={stats}
+        staffList={safeStaff}
+        fileList={safeFiles}
+        backupList={safeBackups}
+        channelList={safeChannels}
+        totalFileBytes={fileBytes?._sum?.size || 0}
+      />
 
       {/* Centro de Operaciones & Accesos Rápidos del Staff (Direct Voice PiP Launch & Interactive Modals) */}
       <InteractiveOperationsHub
         currentUser={{ id: user.id, displayName: user.displayName, role: user.role }}
+        staffList={safeStaff}
       />
 
       {/* Online Staff and Recent Announcements Split View (Interactive Functional Widgets) */}

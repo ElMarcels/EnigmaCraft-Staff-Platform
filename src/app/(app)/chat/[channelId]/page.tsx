@@ -29,11 +29,11 @@ const DEMO_CHANNEL_MESSAGES: Record<string, any[]> = {
 };
 
 const DEMO_MEMBERS: ChannelMemberDTO[] = [
-  { id: "1", displayName: "Marcel", username: "marcel", role: "FOUNDER", avatarColor: "#f43f5e", isOnline: true, statusText: "Desarrollando plataforma" },
-  { id: "2", displayName: "AlexAdmin", username: "alex_sys", role: "ADMIN", avatarColor: "#e11d48", isOnline: true, statusText: "Monitoreando TPS" },
-  { id: "3", displayName: "LucasMod", username: "lucas_guard", role: "MOD", avatarColor: "#06b6d4", isOnline: true, statusText: "Atendiendo tickets" },
-  { id: "4", displayName: "ElenaBuilder", username: "elena_arch", role: "BUILDER", avatarColor: "#10b981", isOnline: true, statusText: "Construyendo lobby" },
-  { id: "5", displayName: "SofiaStaff", username: "sofia_helper", role: "STAFF", avatarColor: "#a855f7", isOnline: false, statusText: "Desconectada" },
+  { id: "1", displayName: "mortal_pirata107", username: "mortal_pirata107", role: "FOUNDER", avatarColor: "#f43f5e", isOnline: true, statusText: "Fundador de Red" },
+  { id: "2", displayName: "ElMarcels", username: "elmarcels", role: "FOUNDER", avatarColor: "#e11d48", isOnline: true, statusText: "Director General" },
+  { id: "3", displayName: "Ale256", username: "ale256", role: "FOUNDER", avatarColor: "#f59e0b", isOnline: true, statusText: "Desarrollo & Infraestructura" },
+  { id: "4", displayName: "Mamut_Feliz", username: "mamut_feliz", role: "STAFF", avatarColor: "#06b6d4", isOnline: true, statusText: "Moderación de Servidores" },
+  { id: "5", displayName: "CobaltJ", username: "cobaltj", role: "STAFF", avatarColor: "#10b981", isOnline: true, statusText: "Soporte al Jugador" },
 ];
 
 export default async function ChannelPage({
