@@ -123,6 +123,10 @@ model Announcement {
   title        String
   content      String
   priority     String    @default("normal")
+  type         String    @default("ANNOUNCEMENT")
+  eventDate    DateTime?
+  serverTarget String?
+  bannerUrl    String?
   publishAt    DateTime?
   requiresRead Boolean   @default(false)
   authorId     String

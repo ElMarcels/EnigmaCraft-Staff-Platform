@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MessageList, MessageDTO } from "@/components/message-list";
 import { MessageComposer } from "@/components/message-composer";
 import { ChannelMembersSidebar, ChannelMemberDTO } from "@/components/channel-members-sidebar";
+import { VoiceChannelView } from "@/components/voice-channel-view";
 import { IconUserGroup } from "@/components/icons";
 
 export function ChatChannelView({
@@ -20,6 +21,17 @@ export function ChatChannelView({
   members?: ChannelMemberDTO[];
 }) {
   const [showMembers, setShowMembers] = useState(true);
+
+  if (channel.type === "VOICE") {
+    return (
+      <VoiceChannelView
+        channel={channel}
+        userDisplayName={userDisplayName}
+        currentUserId={currentUserId}
+        members={members}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full min-w-0 flex-1 overflow-hidden">

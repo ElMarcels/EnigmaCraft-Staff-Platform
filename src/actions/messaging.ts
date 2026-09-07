@@ -209,6 +209,10 @@ export async function createAnnouncement(formData: FormData) {
     const title = String(formData.get("title") || "").trim();
     const content = String(formData.get("content") || "").trim();
     const priority = String(formData.get("priority") || "normal");
+    const type = String(formData.get("type") || "ANNOUNCEMENT");
+    const serverTarget = String(formData.get("serverTarget") || "").trim() || null;
+    const bannerUrl = String(formData.get("bannerUrl") || "").trim() || null;
+    const eventDateRaw = String(formData.get("eventDate") || "");
     const publishAtRaw = String(formData.get("publishAt") || "");
     const requiresReadVal = formData.get("requiresRead");
     const requiresRead = requiresReadVal === "true" || requiresReadVal === "on" || requiresReadVal === "1";
@@ -217,6 +221,7 @@ export async function createAnnouncement(formData: FormData) {
       return { error: "El título y el contenido son obligatorios." };
     }
 
+    const eventDate = eventDateRaw ? new Date(eventDateRaw) : null;
     const publishAt = publishAtRaw ? new Date(publishAtRaw) : null;
     const publishesNow = !publishAt || publishAt.getTime() <= Date.now();
 
@@ -225,6 +230,10 @@ export async function createAnnouncement(formData: FormData) {
         title,
         content,
         priority,
+        type,
+        eventDate,
+        serverTarget,
+        bannerUrl,
         authorId: user.id,
         publishAt,
         requiresRead,
@@ -232,17 +241,59 @@ export async function createAnnouncement(formData: FormData) {
     });
 
     if (publishesNow) {
+      // 1. Notificar a todo el staff en la campana
       const staff = await prisma.user.findMany({ where: { active: true } });
       for (const s of staff) {
         await prisma.notification.create({
           data: {
             userId: s.id,
             type: "ANNOUNCEMENT",
-            title: "Nuevo anuncio",
-            body: title,
+            title: `Nuevo aviso (${type}): ${title}`,
+            body: content.slice(0, 80),
             href: "/announcements",
           },
+        }).catch(() => {});
+      }
+
+      // 2. Publicar automáticamente en el canal de chat de anuncios
+      try {
+        let annChannel = await prisma.channel.findFirst({
+          where: { name: "anuncios" },
         });
+        if (!annChannel) {
+          annChannel = await prisma.channel.findFirst({
+            where: { name: { contains: "anuncio" } },
+          });
+        }
+        if (annChannel) {
+          const typeLabel =
+            type === "EVENT"
+              ? "🎉 **[EVENTO EN LA NETWORK]**"
+              : type === "MAINTENANCE"
+                ? "🔧 **[MANTENIMIENTO PROGRAMADO]**"
+                : type === "URGENTE"
+                  ? "🚨 **[ALERTA URGENTE]**"
+                  : type === "MEETING"
+                    ? "🎙️ **[REUNIÓN DE STAFF]**"
+                    : "📢 **[COMUNICADO OFICIAL]**";
+
+          const eventInfo = eventDate
+            ? `\n⏰ **Fecha/Hora programada:** ${eventDate.toLocaleString("es-ES")}`
+            : "";
+          const serverInfo = serverTarget
+            ? `\n🌐 **Servidor afectado:** ${serverTarget}`
+            : "";
+
+          await prisma.message.create({
+            data: {
+              channelId: annChannel.id,
+              authorId: user.id,
+              content: `${typeLabel} @staff\n\n**${title}**\n${content}${eventInfo}${serverInfo}\n\n👉 *Revisa los detalles completos o confirma lectura en la sección de Anuncios.*`,
+            },
+          });
+        }
+      } catch (e) {
+        console.error("Error auto-broadcasting announcement to chat channel:", e);
       }
     }
 
@@ -251,10 +302,11 @@ export async function createAnnouncement(formData: FormData) {
       action: "ANNOUNCEMENT_CREATE",
       targetType: "Announcement",
       targetId: announcement.id,
-      details: `${title}${publishAt ? ` (programado ${publishAt.toISOString()})` : ""}`,
+      details: `${title} (${type})${publishAt ? ` (programado ${publishAt.toISOString()})` : ""}`,
     });
 
     revalidatePath("/announcements");
+    revalidatePath("/chat");
     return { success: true, id: announcement.id };
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Error al publicar el comunicado." };

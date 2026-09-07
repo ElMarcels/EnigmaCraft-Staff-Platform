@@ -10,11 +10,11 @@ export function RoleBadge({
   showDot = true,
   className = "",
 }: {
-  role: Role;
+  role: Role | string;
   showDot?: boolean;
   className?: string;
 }) {
-  const meta = ROLE_META[role] || ROLE_META.STAFF;
+  const meta = ROLE_META[role as Role] || ROLE_META.STAFF;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide backdrop-blur-md transition-all shadow-sm ${meta.color} ${className}`}
