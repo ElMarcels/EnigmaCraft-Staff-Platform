@@ -44,12 +44,21 @@ export default async function ChannelPage({
   const { channelId } = await params;
   const user = await getCurrentUser();
 
+  const isKnownVoice =
+    channelId.toLowerCase().includes("voz") ||
+    channelId.toLowerCase().includes("voice") ||
+    channelId === "voz-guardia" ||
+    channelId === "voz-reuniones" ||
+    channelId === "voz-despacho";
+
   let channel: any = {
     id: channelId,
     name: channelId,
-    type: "TEXT",
-    description: `Canal oficial de #${channelId}`,
-    category: { name: "COMUNICACIÓN STAFF" },
+    type: isKnownVoice ? "VOICE" : "TEXT",
+    description: isKnownVoice
+      ? "Canal de voz del Staff con PiP flotante, avatares de Minecraft y chat integrado"
+      : `Canal oficial de #${channelId}`,
+    category: { name: isKnownVoice ? "🔊 SALAS DE VOZ (STAFF RTC)" : "COMUNICACIÓN STAFF" },
   };
 
   let messages: any[] = [];
@@ -57,8 +66,8 @@ export default async function ChannelPage({
 
   try {
     const [dbChannel, dbUsers] = await Promise.all([
-      prisma.channel.findUnique({
-        where: { id: channelId },
+      prisma.channel.findFirst({
+        where: { OR: [{ id: channelId }, { name: channelId }] },
         include: { category: true },
       }),
       prisma.user.findMany({
@@ -68,14 +77,35 @@ export default async function ChannelPage({
     ]);
 
     if (dbChannel) {
-      channel = dbChannel;
+      channel = {
+        ...dbChannel,
+        type: isKnownVoice ? "VOICE" : dbChannel.type,
+      };
       const dbMessages = await prisma.message.findMany({
-        where: { channelId },
+        where: { channelId: dbChannel.id },
         orderBy: { createdAt: "asc" },
         include: { author: true, reactions: { include: { user: true } } },
         take: 200,
       });
       messages = dbMessages;
+    }
+
+    if (messages.length === 0 && isKnownVoice) {
+      messages = [
+        {
+          id: "vmsg-init",
+          content: "🔊 Canal de voz activo. Usa los controles superiores para silenciar/activar micrófono, o cambia de página para ver la ventana flotante PiP.",
+          createdAt: new Date().toISOString(),
+          edited: false,
+          author: {
+            id: "sys",
+            displayName: "Sistema EnigmaCraft",
+            avatarColor: "#e11d48",
+            role: "ADMIN",
+          },
+          reactions: [],
+        },
+      ];
     }
 
     if (dbUsers && dbUsers.length > 0) {

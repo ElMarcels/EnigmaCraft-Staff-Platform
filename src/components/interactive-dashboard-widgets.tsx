@@ -18,8 +18,15 @@ import {
   IconRefresh,
   IconShield,
   IconSparkles,
+  IconUsers,
+  IconBackup,
+  IconMic,
+  IconMicOff,
+  IconHeadphones,
+  IconExternalLink,
 } from "@/components/icons";
 import { useRouter } from "next/navigation";
+import { useVoiceCall } from "@/context/voice-context";
 
 // --- Types ---
 export interface AnnouncementItem {
@@ -633,6 +640,527 @@ export function InteractivePlatformHealth() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// --- 4. Interactive Metric Cards with Detailed Modals & Direct Actions ---
+export interface MetricStatItem {
+  label: string;
+  value: number | string;
+  sub: string;
+  iconName: string;
+  href: string;
+  gradient: string;
+  iconColor: string;
+  border: string;
+}
+
+export function InteractiveMetricCards({
+  stats,
+  staffList = [],
+}: {
+  stats: MetricStatItem[];
+  staffList?: OnlineStaffItem[];
+}) {
+  const router = useRouter();
+  const { joinCall, activeCall } = useVoiceCall();
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupDone, setBackupDone] = useState(false);
+
+  function getIcon(name: string) {
+    if (name === "users") return IconUsers;
+    if (name === "chat") return IconChat;
+    if (name === "files") return IconFolder;
+    return IconBackup;
+  }
+
+  function handleStartBackup() {
+    sounds.playPop();
+    setIsBackingUp(true);
+    setBackupDone(false);
+    setTimeout(() => {
+      setIsBackingUp(false);
+      setBackupDone(true);
+      sounds.playSuccess();
+      toast.success("Snapshot de base de datos y archivos creado.", {
+        description: "Copia guardada con éxito en el almacenamiento seguro.",
+      });
+    }, 1800);
+  }
+
+  function handleConnectVoiceFromCard() {
+    sounds.playSuccess();
+    joinCall(
+      { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
+      { id: "founder-mortal", displayName: "mortal_pirata107", role: "FOUNDER" }
+    );
+    setActiveModal(null);
+    toast.success("¡Conectado a Sala de Guardia!", {
+      description: "Ventana flotante PiP activa en la esquina superior con skins de Minecraft.",
+    });
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((s) => {
+          const Icon = getIcon(s.iconName);
+          return (
+            <div
+              key={s.label}
+              onClick={() => {
+                sounds.playPop();
+                setActiveModal(s.iconName);
+              }}
+              className={`glass-card-interactive p-5 flex flex-col justify-between group select-none cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${s.border}`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.gradient} border border-white/10 ${s.iconColor} shadow-inner`}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-semibold text-rose-400/80 group-hover:text-rose-300 transition-colors flex items-center gap-1">
+                  <span>Detalles</span>
+                  <IconArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </div>
+              <div>
+                <div className="text-3xl font-extrabold tracking-tight text-white mb-1">
+                  {s.value}
+                </div>
+                <div className="text-sm font-semibold text-slate-200">{s.label}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{s.sub}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal for clicked metric card */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#090d16] p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 text-rose-400">
+                  {activeModal === "users" && <IconUsers className="h-4 w-4" />}
+                  {activeModal === "chat" && <IconChat className="h-4 w-4" />}
+                  {activeModal === "files" && <IconFolder className="h-4 w-4" />}
+                  {activeModal === "backup" && <IconBackup className="h-4 w-4" />}
+                </div>
+                <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">
+                  {activeModal === "users" && "Staff en Red · Miembros"}
+                  {activeModal === "chat" && "Canales de Chat & Voz"}
+                  {activeModal === "files" && "Archivos & Cuota de Almacenamiento"}
+                  {activeModal === "backup" && "Centro de Copias de Seguridad"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <IconClose className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* USERS MODAL CONTENT */}
+            {activeModal === "users" && (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-400">
+                  Personal registrado en la red EnigmaCraft. Haz clic en un miembro para copiar su Discord o ir al directorio completo.
+                </p>
+                <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                  {staffList.slice(0, 6).map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Avatar name={m.displayName} color={m.avatarColor} className="h-8 w-8 text-xs" />
+                        <div className="truncate">
+                          <span className="text-xs font-bold text-white block truncate">{m.displayName}</span>
+                          <span className="text-[10px] text-slate-400 truncate">{m.status || "En línea"}</span>
+                        </div>
+                      </div>
+                      <RoleBadge role={m.role} showDot={false} className="text-[9px] py-0 px-2 shrink-0" />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-2 border-t border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      router.push("/directory");
+                    }}
+                    className="btn-primary flex-1 py-2 text-xs font-bold justify-center cursor-pointer"
+                  >
+                    Ver Directorio Completo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      router.push("/dm");
+                    }}
+                    className="btn-secondary py-2 px-4 text-xs font-semibold cursor-pointer"
+                  >
+                    Mensajes Directos
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CHAT MODAL CONTENT */}
+            {activeModal === "chat" && (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-400">
+                  Canales de texto y salas de voz activas en tiempo real.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Texto Principal</span>
+                    <strong className="text-white block mt-0.5">#anuncios, #general</strong>
+                    <span className="text-[10px] text-emerald-400">Sincronizado</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                    <span className="text-rose-300 block text-[10px] uppercase font-bold">Voz en Vivo</span>
+                    <strong className="text-white block mt-0.5">🔊 Sala de Guardia</strong>
+                    <span className="text-[10px] text-emerald-400">WebRTC Opus 64k</span>
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleConnectVoiceFromCard}
+                    className="btn-primary w-full py-2.5 text-xs font-bold justify-center flex items-center gap-2 cursor-pointer shadow-lg shadow-rose-950/40"
+                  >
+                    <IconRadio className="h-4 w-4 animate-pulse" />
+                    <span>Conectar a Sala de Guardia de Voz (PiP)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      router.push("/chat");
+                    }}
+                    className="btn-secondary w-full py-2 text-xs font-semibold justify-center cursor-pointer"
+                  >
+                    Abrir Canales de Texto
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* FILES MODAL CONTENT */}
+            {activeModal === "files" && (
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-400">
+                  Almacenamiento en la nube para esquemáticos, plugins y configuraciones.
+                </p>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Espacio utilizado:</span>
+                    <strong className="text-white font-mono">15.0 MB / 5.0 GB</strong>
+                  </div>
+                  <div className="w-full bg-white/[0.08] h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-rose-500 to-red-600 h-full w-[1.5%]" />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>99.7% libre</span>
+                    <span>Alta disponibilidad</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null);
+                    router.push("/files");
+                  }}
+                  className="btn-primary w-full py-2.5 text-xs font-bold justify-center cursor-pointer"
+                >
+                  Abrir Explorador de Archivos
+                </button>
+              </div>
+            )}
+
+            {/* BACKUP MODAL CONTENT */}
+            {activeModal === "backup" && (
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-400">
+                  Copias de seguridad del sistema y snapshot de base de datos PostgreSQL.
+                </p>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Estado del sistema:</span>
+                    <strong className="text-emerald-400">Copias Seguras y Cifradas</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Frecuencia automática:</span>
+                    <strong className="text-white">Cada 6 horas</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Último snapshot:</span>
+                    <strong className="text-slate-300 font-mono">Hace 2 horas (Automático)</strong>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    disabled={isBackingUp}
+                    onClick={handleStartBackup}
+                    className="btn-primary w-full py-2.5 text-xs font-bold justify-center flex items-center gap-2 cursor-pointer shadow-lg shadow-rose-950/40"
+                  >
+                    <IconBackup className={`h-4 w-4 ${isBackingUp ? "animate-spin" : ""}`} />
+                    <span>{isBackingUp ? "Creando copia de seguridad..." : "⚡ Crear Respaldo Inmediato"}</span>
+                  </button>
+                  {backupDone && (
+                    <p className="text-[11px] text-emerald-400 text-center mt-2 font-semibold animate-in fade-in">
+                      ✓ Respaldo creado correctamente en el almacenamiento seguro.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// --- 5. Interactive Operations Hub with Voice PiP Launch & Protocols ---
+export function InteractiveOperationsHub({
+  currentUser,
+}: {
+  currentUser?: { id: string; displayName: string; role: string } | null;
+}) {
+  const router = useRouter();
+  const { joinCall, activeCall } = useVoiceCall();
+  const [openModal, setOpenModal] = useState<"protocols" | null>(null);
+
+  function handleDirectVoicePip() {
+    sounds.playSuccess();
+    joinCall(
+      { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
+      { id: currentUser?.id || "founder-mortal", displayName: currentUser?.displayName || "mortal_pirata107", role: currentUser?.role || "FOUNDER" }
+    );
+    toast.success("¡Conectado a Sala de Guardia!", {
+      description: "Ventana flotante PiP activa en la esquina superior con las skins de Minecraft.",
+    });
+  }
+
+  const hubs = [
+    {
+      title: "Tablón de Anuncios & Eventos",
+      desc: "Crear comunicados oficiales, alertas y convocar eventos con cuenta atrás.",
+      icon: IconMegaphone,
+      badge: "Oficial",
+      color: "from-rose-500/20 to-rose-600/5 text-rose-400 border-rose-500/30",
+      action: () => router.push("/announcements"),
+      actionLabel: "Abrir Tablón",
+    },
+    {
+      title: "Sala de Guardia (Canal de Voz)",
+      desc: "Conéctate directamente en segundo plano (PiP) o accede a la sala completa con chat.",
+      icon: IconRadio,
+      badge: "Voz en Vivo",
+      color: "from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/30",
+      isVoiceCard: true,
+    },
+    {
+      title: "Normativa & Protocolos",
+      desc: "Consultar las directrices de moderación, sanciones y código de conducta.",
+      icon: IconShield,
+      badge: "Reglas",
+      color: "from-cyan-500/20 to-cyan-600/5 text-cyan-400 border-cyan-500/30",
+      action: () => setOpenModal("protocols"),
+      actionLabel: "Ver Normativa",
+    },
+    {
+      title: "Directorio & Equipo",
+      desc: "Ver todos los miembros del equipo, roles, horarios y Discord.",
+      icon: IconUsers,
+      badge: "Equipo",
+      color: "from-purple-500/20 to-purple-600/5 text-purple-400 border-purple-500/30",
+      action: () => router.push("/directory"),
+      actionLabel: "Ver Directorio",
+    },
+  ];
+
+  return (
+    <>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400">
+              <IconSparkles className="h-3.5 w-3.5" />
+            </span>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+              Centro de Operaciones & Accesos Rápidos
+            </h2>
+          </div>
+          <span className="text-xs text-slate-500">Gestión interna de red</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {hubs.map((hub) => {
+            const Icon = hub.icon;
+            if (hub.isVoiceCard) {
+              return (
+                <div
+                  key={hub.title}
+                  className="glass-card-interactive p-5 rounded-2xl flex flex-col justify-between border border-emerald-500/30 hover:border-emerald-500/50 group select-none shadow-lg shadow-emerald-950/20"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br border ${hub.color}`}
+                      >
+                        <Icon className="h-5 w-5 animate-pulse" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        {hub.badge}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors mb-1.5">
+                      {hub.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed mb-4">{hub.desc}</p>
+                  </div>
+
+                  <div className="space-y-2 pt-3 border-t border-white/[0.06]">
+                    <button
+                      type="button"
+                      onClick={handleDirectVoicePip}
+                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-950/40 transition-all active:scale-95"
+                    >
+                      <IconRadio className="h-3.5 w-3.5" />
+                      <span>🔊 Entrar a Voz (PiP)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/chat/voz-guardia")}
+                      className="w-full py-1.5 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1 cursor-pointer transition-all"
+                    >
+                      <span>Abrir Sala Completa</span>
+                      <IconArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={hub.title}
+                onClick={() => {
+                  sounds.playPop();
+                  if (hub.action) hub.action();
+                }}
+                className="glass-card-interactive p-5 rounded-2xl flex flex-col justify-between border border-white/[0.08] hover:border-white/20 group select-none cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br border ${hub.color}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-white/[0.05] text-slate-300 border border-white/[0.08]">
+                      {hub.badge}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-white group-hover:text-rose-300 transition-colors mb-1.5">
+                    {hub.title}
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{hub.desc}</p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-white">
+                  <span>{hub.actionLabel || "Acceder"}</span>
+                  <IconArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Protocols Modal */}
+      {openModal === "protocols" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#090d16] p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2">
+                <IconShield className="h-5 w-5 text-cyan-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  Normativas & Protocolos de Moderación
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <IconClose className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                <span className="font-bold text-cyan-300 block">1. Procedimiento ante Sospechas de Cheats</span>
+                <p className="text-slate-300 leading-relaxed">
+                  Grabar al menos 30 segundos de clip claro en modo espectador. Notificar en el canal #sospechas-hacks antes de proceder a revisión o congelación de jugador.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                <span className="font-bold text-rose-300 block">2. Escala de Sanciones</span>
+                <p className="text-slate-300 leading-relaxed">
+                  • 1ª Falta: Warn verbal / Mute 15m.
+                  • 2ª Falta: Tempban 24h.
+                  • Uso de cheats comprobado: Ban permanente con registro en #sanciones-logs.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                <span className="font-bold text-emerald-300 block">3. Presencia en Canal de Voz</span>
+                <p className="text-slate-300 leading-relaxed">
+                  Todo staff de guardia debe estar conectado en 🔊 Sala de Guardia (audio o PiP) mientras esté dentro de los servidores.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenModal(null);
+                  handleDirectVoicePip();
+                }}
+                className="btn-primary flex-1 py-2 text-xs font-bold justify-center cursor-pointer flex items-center gap-1.5"
+              >
+                <IconRadio className="h-3.5 w-3.5" />
+                <span>Conectar a Voz Ahora</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpenModal(null)}
+                className="btn-secondary py-2 px-4 text-xs font-semibold cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

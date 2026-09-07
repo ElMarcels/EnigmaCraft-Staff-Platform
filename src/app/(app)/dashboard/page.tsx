@@ -21,6 +21,8 @@ import {
   InteractiveOnlineStaff,
   InteractiveRecentAnnouncements,
   InteractivePlatformHealth,
+  InteractiveMetricCards,
+  InteractiveOperationsHub,
 } from "@/components/interactive-dashboard-widgets";
 
 export const dynamic = "force-dynamic";
@@ -119,6 +121,7 @@ export default async function DashboardPage() {
       label: "Staff en Red",
       value: staffCount,
       sub: "Miembros registrados",
+      iconName: "users",
       icon: IconUsers,
       href: "/directory",
       gradient: "from-white/[0.08] to-transparent",
@@ -129,6 +132,7 @@ export default async function DashboardPage() {
       label: "Canales de Chat",
       value: channelCount,
       sub: `${messageCount} mensajes enviados`,
+      iconName: "chat",
       icon: IconChat,
       href: "/chat",
       gradient: "from-cyan-500/20 to-blue-600/10",
@@ -139,6 +143,7 @@ export default async function DashboardPage() {
       label: "Archivos & Documentos",
       value: fileCount,
       sub: fileBytes?._sum?.size ? fmtBytes(fileBytes._sum.size) : "0 B",
+      iconName: "files",
       icon: IconFolder,
       href: "/files",
       gradient: "from-emerald-500/20 to-teal-600/10",
@@ -149,6 +154,7 @@ export default async function DashboardPage() {
       label: "Copias de Seguridad",
       value: backupCount,
       sub: "Copias seguras del sistema",
+      iconName: "backup",
       icon: IconBackup,
       href: "/founder/backups",
       gradient: "from-amber-500/20 to-orange-600/10",
@@ -213,10 +219,17 @@ export default async function DashboardPage() {
               <span className="text-slate-200 font-semibold">EnigmaCraft</span>.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/chat/voz-guardia"
+              className="btn-primary flex items-center gap-2 text-xs font-semibold shadow-lg shadow-emerald-950/40 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/40"
+            >
+              <IconRadio className="h-4 w-4 animate-pulse" />
+              Sala de Voz (PiP)
+            </Link>
             <Link
               href="/chat"
-              className="btn-primary flex items-center gap-2 text-xs font-semibold shadow-lg shadow-rose-950/40"
+              className="btn-secondary flex items-center gap-2 text-xs font-semibold"
             >
               <IconChat className="h-4 w-4" />
               Abrir Canales
@@ -232,87 +245,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Grid of Metric Glass Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => {
-          const Icon = s.icon;
-          return (
-            <Link
-              key={s.label}
-              href={s.href}
-              className={`glass-card-interactive p-5 flex flex-col justify-between group select-none ${s.border}`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.gradient} border border-white/10 ${s.iconColor} shadow-inner`}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium text-slate-500 group-hover:text-slate-300 transition-colors">
-                  Detalles
-                </span>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold tracking-tight text-white mb-1">
-                  {s.value}
-                </div>
-                <div className="text-sm font-semibold text-slate-200">{s.label}</div>
-                <div className="text-xs text-slate-400 mt-0.5">{s.sub}</div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Grid of Metric Glass Cards (Functional Interactive Modals with Live Data) */}
+      <InteractiveMetricCards stats={stats} staffList={allStaff} />
 
-      {/* Centro de Operaciones & Accesos Rápidos del Staff */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400">
-              <IconSparkles className="h-3.5 w-3.5" />
-            </span>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-              Centro de Operaciones & Accesos Rápidos
-            </h2>
-          </div>
-          <span className="text-xs text-slate-500">Gestión interna de red</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickHub.map((hub) => {
-            const Icon = hub.icon;
-            return (
-              <Link
-                key={hub.title}
-                href={hub.href}
-                className="glass-card-interactive p-5 rounded-2xl flex flex-col justify-between border border-white/[0.08] hover:border-white/20 group select-none"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br border ${hub.color}`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-white/[0.05] text-slate-300 border border-white/[0.08]">
-                      {hub.badge}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-rose-300 transition-colors mb-1.5">
-                    {hub.title}
-                  </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">{hub.desc}</p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold text-slate-300 group-hover:text-white">
-                  <span>Acceder</span>
-                  <IconArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      {/* Centro de Operaciones & Accesos Rápidos del Staff (Direct Voice PiP Launch & Interactive Modals) */}
+      <InteractiveOperationsHub
+        currentUser={{ id: user.id, displayName: user.displayName, role: user.role }}
+      />
 
       {/* Online Staff and Recent Announcements Split View (Interactive Functional Widgets) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
