@@ -72,6 +72,18 @@ function TypewriterText({ text, active }: { text: string; active: boolean }) {
 
 export function PillDock({ userRole }: { userRole?: string }) {
   const pathname = usePathname();
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+
+  useEffect(() => {
+    function handleUnreadUpdate(e: any) {
+      if (e.detail?.unreadMap) {
+        const count = Object.keys(e.detail.unreadMap).length;
+        setHasUnreadChat(count > 0);
+      }
+    }
+    window.addEventListener("ec_unread_update", handleUnreadUpdate);
+    return () => window.removeEventListener("ec_unread_update", handleUnreadUpdate);
+  }, []);
 
   // Hide dock on auth/system pages
   if (pathname === "/login" || pathname === "/suspended" || pathname === "/onboarding") {
@@ -98,11 +110,19 @@ export function PillDock({ userRole }: { userRole?: string }) {
             key={item.href}
             href={item.href}
             title={item.label}
-            className={`pill-dock-item group ${
+            className={`pill-dock-item group relative ${
               active ? "pill-dock-item-active" : ""
             }`}
           >
-            <Icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-active:scale-90" />
+            <div className="relative flex items-center justify-center">
+              <Icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-active:scale-90" />
+              {item.href === "/chat" && hasUnreadChat && !active && (
+                <>
+                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)] animate-ping" />
+                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)]" />
+                </>
+              )}
+            </div>
             <TypewriterText text={item.label} active={active} />
           </Link>
         );

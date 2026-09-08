@@ -392,7 +392,19 @@ export function InteractiveRecentAnnouncements({
 }
 
 // --- 3. Interactive Functional System Health & Diagnostics Widget ---
-export function InteractivePlatformHealth() {
+export function InteractivePlatformHealth({
+  channelCount = 0,
+  messageCount = 0,
+  totalFileBytes = 0,
+  fileCount = 0,
+  channelList = [],
+}: {
+  channelCount?: number;
+  messageCount?: number;
+  totalFileBytes?: number;
+  fileCount?: number;
+  channelList?: DashboardChannelItem[];
+}) {
   const router = useRouter();
   const [isRunningPing, setIsRunningPing] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -410,9 +422,9 @@ export function InteractivePlatformHealth() {
     setTimeout(() => {
       setDiagnosticResult({
         dbPing: Math.floor(8 + Math.random() * 6),
-        chatSockets: 10,
+        chatSockets: channelCount || 10,
         voiceBitrate: "64kbps Opus E2E",
-        driveStatus: "Sincronizado (Local / Cloud Storage)",
+        driveStatus: `Sincronizado (${fileCount} archivos)`,
       });
       setIsRunningPing(false);
       sounds.playSuccess();
@@ -469,11 +481,12 @@ export function InteractivePlatformHealth() {
               </span>
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
             </div>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-              <IconCheck className="h-4 w-4 text-emerald-400" /> 10 Canales Activos
+            <span className="text-sm font-extrabold text-white flex items-center gap-1.5 truncate">
+              <IconCheck className="h-4 w-4 text-emerald-400 shrink-0" />{" "}
+              <span>{channelCount > 0 ? `${channelCount} Canales Activos` : "Canales de Chat"}</span>
             </span>
-            <span className="text-[10px] text-slate-500 block mt-1 group-hover:text-slate-300">
-              Clic para diagnósticos →
+            <span className="text-[10px] text-slate-400 block mt-1 group-hover:text-slate-200 truncate">
+              {messageCount} mensajes registrados →
             </span>
           </button>
 
@@ -538,11 +551,12 @@ export function InteractivePlatformHealth() {
               </span>
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
             </div>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-              <IconCheck className="h-4 w-4 text-emerald-400" /> Sincronizado
+            <span className="text-sm font-extrabold text-white flex items-center gap-1.5 truncate">
+              <IconCheck className="h-4 w-4 text-emerald-400 shrink-0" />{" "}
+              <span>{totalFileBytes > 0 ? fmtBytes(totalFileBytes) : "Sincronizado"}</span>
             </span>
-            <span className="text-[10px] text-slate-500 block mt-1 group-hover:text-slate-300">
-              Clic para ver cuota →
+            <span className="text-[10px] text-slate-400 block mt-1 group-hover:text-slate-200 truncate">
+              {fileCount} archivos en Drive · Ver cuota →
             </span>
           </button>
         </div>
@@ -573,8 +587,12 @@ export function InteractivePlatformHealth() {
               <div className="space-y-3 text-xs">
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Canales configurados:</span>
-                    <strong className="text-white">10 canales (Oficial, General, Moderación, Voz)</strong>
+                    <span className="text-slate-400">Canales en Base de Datos:</span>
+                    <strong className="text-white font-mono">{channelCount} canales</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Mensajes Totales:</span>
+                    <strong className="text-white font-mono">{messageCount}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Latencia estimada:</span>
@@ -585,6 +603,26 @@ export function InteractivePlatformHealth() {
                     <strong className="text-cyan-300">SSL/TLS AES-256</strong>
                   </div>
                 </div>
+
+                {channelList.length > 0 && (
+                  <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                    {channelList.slice(0, 6).map((ch) => (
+                      <div
+                        key={ch.id}
+                        onClick={() => {
+                          sounds.playPop();
+                          setActiveModal(null);
+                          router.push(`/chat/${ch.id}`);
+                        }}
+                        className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] cursor-pointer transition-colors"
+                      >
+                        <span className="font-bold text-white truncate">#{ch.name}</span>
+                        <span className="text-[10px] text-rose-400 font-semibold shrink-0">Abrir →</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -593,7 +631,7 @@ export function InteractivePlatformHealth() {
                   }}
                   className="btn-primary w-full py-2.5 text-xs font-bold justify-center cursor-pointer"
                 >
-                  Abrir Canales de Chat
+                  Abrir Todos los Canales de Chat
                 </button>
               </div>
             )}
@@ -658,7 +696,11 @@ export function InteractivePlatformHealth() {
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Almacenamiento ocupado:</span>
-                    <strong className="text-white font-mono">18.0 MB</strong>
+                    <strong className="text-white font-mono">{fmtBytes(totalFileBytes)}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Archivos y carpetas:</span>
+                    <strong className="text-white font-mono">{fileCount} elementos</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Última sincronización:</span>
@@ -1485,5 +1527,109 @@ export function InteractiveOperationsHub({
         </div>
       )}
     </>
+  );
+}
+
+// --- 6. Real-Time Interactive Recent Chat Activity Widget ---
+export interface RecentChatMessageItem {
+  id: string;
+  content: string;
+  channelId: string;
+  channelName: string;
+  createdAt: string;
+  author: {
+    displayName: string;
+    role: string;
+    avatarColor?: string | null;
+  };
+}
+
+export function InteractiveRecentChatWidget({
+  messages = [],
+}: {
+  messages?: RecentChatMessageItem[];
+}) {
+  const router = useRouter();
+
+  return (
+    <section className="glass-card p-6 rounded-3xl border border-white/[0.08] space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400">
+            <IconChat className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+              Actividad Reciente del Chat Staff
+            </h2>
+            <p className="text-xs text-slate-400">
+              Últimos mensajes emitidos en los canales. Haz clic en cualquiera para responder directamente.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            sounds.playPop();
+            router.push("/chat");
+          }}
+          className="btn-secondary py-1.5 px-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+        >
+          <span>Abrir Canales</span>
+          <IconArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {messages.length === 0 ? (
+        <div className="p-6 text-center text-xs text-slate-400 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
+          No hay mensajes recientes en los canales todavía.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              onClick={() => {
+                sounds.playPop();
+                router.push(`/chat/${m.channelId}`);
+              }}
+              className="p-3.5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] hover:border-cyan-500/40 transition-all cursor-pointer group flex flex-col justify-between space-y-2 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <img
+                    src={`https://mc-heads.net/avatar/${encodeURIComponent(m.author.displayName)}/24`}
+                    alt={m.author.displayName}
+                    className="h-6 w-6 rounded-lg bg-black/40 border border-white/10 shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                  <span className="text-xs font-bold text-white truncate">{m.author.displayName}</span>
+                  <RoleBadge role={m.author.role} showDot={false} className="py-0 px-1 text-[8px]" />
+                </div>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 shrink-0">
+                  #{m.channelName}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed bg-black/20 p-2 rounded-xl border border-white/[0.03]">
+                {m.content}
+              </p>
+
+              <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-white/[0.03]">
+                <span>
+                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span className="text-rose-400 group-hover:text-rose-300 font-semibold flex items-center gap-1 transition-colors">
+                  Ir al canal <IconArrowRight className="h-2.5 w-2.5" />
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

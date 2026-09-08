@@ -24,6 +24,7 @@ import {
   InteractivePlatformHealth,
   InteractiveMetricCards,
   InteractiveOperationsHub,
+  InteractiveRecentChatWidget,
 } from "@/components/interactive-dashboard-widgets";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
   let dbFiles: any[] = [];
   let dbBackups: any[] = [];
   let dbChannels: any[] = [];
+  let dbRecentMessages: any[] = [];
   let announcements: any[] = [];
   let allStaff: any[] = [
     {
@@ -62,13 +64,24 @@ export default async function DashboardPage() {
   ];
 
   try {
-    const res = await Promise.all([
+    const [
+      staffCountRes,
+      channelCountRes,
+      messageCountRes,
+      fileCountRes,
+      fileBytesRes,
+      backupCountRes,
+      announcementsRes,
+      staffListRes,
+      filesRes,
+      backupsRes,
+      channelsRes,
+      recentMessagesRes,
+    ] = await Promise.allSettled([
       prisma.user.count({ where: { active: true } }),
       prisma.channel.count(),
       prisma.message.count(),
-      // Real file count: counts all items in Drive (files + folders)
       prisma.fileNode.count(),
-      // Real storage sum across all files
       prisma.fileNode.aggregate({ _sum: { size: true } }),
       prisma.backup.count(),
       prisma.announcement.findMany({
@@ -91,7 +104,6 @@ export default async function DashboardPage() {
           contactDiscord: true,
         },
       }),
-      // Real files & folders from EnigmaDrive
       prisma.fileNode.findMany({
         take: 15,
         orderBy: [{ isFolder: "desc" }, { createdAt: "desc" }],
@@ -103,25 +115,29 @@ export default async function DashboardPage() {
         include: { creator: true },
       }),
       prisma.channel.findMany({
-        take: 20,
+        take: 30,
         orderBy: [{ category: { position: "asc" } }, { position: "asc" }],
         include: { category: true },
       }),
+      prisma.message.findMany({
+        take: 6,
+        orderBy: { createdAt: "desc" },
+        include: { author: true, channel: true },
+      }),
     ]);
 
-    if (res[0] > 0) {
-      staffCount = res[0];
-      channelCount = res[1] || 0;
-      messageCount = res[2] || 0;
-      fileCount = res[3] || 0;
-      fileBytes = res[4] as any;
-      backupCount = res[5] || 0;
-      if (res[6] && res[6].length > 0) announcements = res[6];
-      if (res[7] && res[7].length > 0) allStaff = res[7];
-      dbFiles = res[8] || [];
-      dbBackups = res[9] || [];
-      dbChannels = res[10] || [];
-    }
+    if (staffCountRes.status === "fulfilled" && staffCountRes.value > 0) staffCount = staffCountRes.value;
+    if (channelCountRes.status === "fulfilled") channelCount = channelCountRes.value;
+    if (messageCountRes.status === "fulfilled") messageCount = messageCountRes.value;
+    if (fileCountRes.status === "fulfilled") fileCount = fileCountRes.value;
+    if (fileBytesRes.status === "fulfilled") fileBytes = fileBytesRes.value as any;
+    if (backupCountRes.status === "fulfilled") backupCount = backupCountRes.value;
+    if (announcementsRes.status === "fulfilled" && announcementsRes.value.length > 0) announcements = announcementsRes.value;
+    if (staffListRes.status === "fulfilled" && staffListRes.value.length > 0) allStaff = staffListRes.value;
+    if (filesRes.status === "fulfilled") dbFiles = filesRes.value;
+    if (backupsRes.status === "fulfilled") dbBackups = backupsRes.value;
+    if (channelsRes.status === "fulfilled") dbChannels = channelsRes.value;
+    if (recentMessagesRes.status === "fulfilled") dbRecentMessages = recentMessagesRes.value;
   } catch (err) {
     console.error("Dashboard database query error:", err);
   }
@@ -222,6 +238,19 @@ export default async function DashboardPage() {
     },
   }));
 
+  const safeRecentMessages = dbRecentMessages.map((m) => ({
+    id: String(m.id),
+    content: String(m.content),
+    channelId: String(m.channelId),
+    channelName: String(m.channel?.name || "chat"),
+    createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt),
+    author: {
+      displayName: m.author?.displayName || "Staff",
+      role: String(m.author?.role || "STAFF"),
+      avatarColor: m.author?.avatarColor || "#6366f1",
+    },
+  }));
+
   const stats = [
     {
       label: "Staff en Red",
@@ -319,7 +348,7 @@ export default async function DashboardPage() {
         fileList={safeFiles}
         backupList={safeBackups}
         channelList={safeChannels}
-        totalFileBytes={fileBytes?._sum?.size || 0}
+        totalFileBytes={totalFileBytes}
       />
 
       {/* Centro de Operaciones & Accesos Rápidos del Staff (Direct Voice PiP Launch & Interactive Modals) */}
@@ -328,14 +357,23 @@ export default async function DashboardPage() {
         staffList={safeStaff}
       />
 
+      {/* Actividad Reciente del Chat del Staff (Interactive Functional Widget) */}
+      <InteractiveRecentChatWidget messages={safeRecentMessages} />
+
       {/* Online Staff and Recent Announcements Split View (Interactive Functional Widgets) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <InteractiveOnlineStaff staff={safeOnline} />
         <InteractiveRecentAnnouncements announcements={safeAnnouncements} />
       </div>
 
-      {/* Estado Operativo de la Plataforma (Interactive Functional Diagnostic Tools) */}
-      <InteractivePlatformHealth />
+      {/* Estado Operativo de la Plataforma (Interactive Functional Diagnostic Tools with Live DB Stats) */}
+      <InteractivePlatformHealth
+        channelCount={channelCount}
+        messageCount={messageCount}
+        totalFileBytes={totalFileBytes}
+        fileCount={fileCount}
+        channelList={safeChannels}
+      />
     </div>
   );
 }

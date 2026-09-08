@@ -78,11 +78,23 @@ export function ChatSidebar({
 
   // Real-time voice presence map: channelId -> users
   const [voicePresence, setVoicePresence] = useState<Record<string, HoverVoiceUser[]>>({});
+  const [unreadChannels, setUnreadChannels] = useState<Record<string, boolean>>({});
   const [hoveredVoice, setHoveredVoice] = useState<{
     channelName: string;
     users: HoverVoiceUser[];
     pos: { x: number; y: number };
   } | null>(null);
+
+  // Listen to unread updates from ChatUnreadListener
+  useEffect(() => {
+    function handleUnreadUpdate(e: any) {
+      if (e.detail?.unreadMap) {
+        setUnreadChannels(e.detail.unreadMap);
+      }
+    }
+    window.addEventListener("ec_unread_update", handleUnreadUpdate);
+    return () => window.removeEventListener("ec_unread_update", handleUnreadUpdate);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -361,6 +373,15 @@ export function ChatSidebar({
                               <span className="shrink-0">{getChannelIcon(ch)}</span>
                             )}
                             <span className="truncate">{ch.name}</span>
+
+                            {/* Círculo rojo al lado del chat si hay mensaje nuevo no visto */}
+                            {unreadChannels[ch.id] && !active && (
+                              <span
+                                className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)] animate-pulse shrink-0 ring-2 ring-rose-500/30"
+                                title="Mensaje nuevo sin leer"
+                              />
+                            )}
+
                             {hasActiveVoice && (
                               <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1 shrink-0 animate-pulse">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -370,6 +391,11 @@ export function ChatSidebar({
                             {isVoice && !hasActiveVoice && (
                               <span className="ml-auto text-[9px] font-mono px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
                                 VOZ
+                              </span>
+                            )}
+                            {unreadChannels[ch.id] && !active && !hasActiveVoice && !isVoice && (
+                              <span className="ml-auto text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
+                                NUEVO
                               </span>
                             )}
                           </Link>

@@ -48,6 +48,8 @@ interface VoiceContextType {
   activeCall: ActiveCallState | null;
   speakingIndex: number | null;
   settings: VoiceSettings;
+  isSelfSpeaking: boolean;
+  audioLevel: number;
   joinCall: (
     channel: { id: string; name: string; categoryName?: string },
     user?: VoiceMemberInput
@@ -73,6 +75,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [activeCall, setActiveCall] = useState<ActiveCallState | null>(null);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [isSelfSpeaking, setIsSelfSpeaking] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const [settings, setSettings] = useState<VoiceSettings>({
     noiseSuppression: true,
     inputSensitivity: 60,
@@ -88,10 +91,27 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const currentUserRef = useRef<VoiceMemberInput | null>(null);
   const lastSignalPollTimeRef = useRef<number>(Date.now() - 5000);
 
+  const isSpeakingRef = useRef(false);
+  const isCallConnectedRef = useRef(false);
+  const isMutedRef = useRef(false);
+  const isDeafenedRef = useRef(false);
+  const settingsRef = useRef(settings);
+  const animFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    isCallConnectedRef.current = Boolean(activeCall?.isConnected);
+    isMutedRef.current = Boolean(activeCall?.isMuted);
+    isDeafenedRef.current = Boolean(activeCall?.isDeafened);
+    settingsRef.current = settings;
+  }, [activeCall?.isConnected, activeCall?.isMuted, activeCall?.isDeafened, settings]);
+
   // --- Real Microphone Audio Stream & Voice Activity Detection (VAD) ---
   async function initMicrophone(): Promise<MediaStream | null> {
     try {
       if (localStreamRef.current) {
+        if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+          await audioContextRef.current.resume().catch(() => {});
+        }
         return localStreamRef.current;
       }
 
@@ -115,28 +135,68 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         if (AudioCtx) {
           const ctx = new AudioCtx();
           audioContextRef.current = ctx;
+          if (ctx.state === "suspended") {
+            await ctx.resume().catch(() => {});
+          }
+
           const source = ctx.createMediaStreamSource(stream);
           const analyser = ctx.createAnalyser();
-          analyser.fftSize = 512;
-          analyser.smoothingTimeConstant = 0.4;
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.25;
           source.connect(analyser);
 
           const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
+          if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current);
+          }
+
           const checkAudioLevel = () => {
-            if (!localStreamRef.current || !activeCall?.isConnected) return;
+            if (!localStreamRef.current) return;
+
             analyser.getByteFrequencyData(dataArray);
             let sum = 0;
             for (let i = 0; i < dataArray.length; i++) {
               sum += dataArray[i];
             }
             const avg = sum / dataArray.length;
-            const threshold = (100 - settings.inputSensitivity) * 0.45; // Dynamic sensitivity
 
-            const speaking = avg > threshold && !activeCall?.isMuted && !activeCall?.isDeafened;
-            setIsSelfSpeaking((prev) => (prev !== speaking ? speaking : prev));
+            // Map level 0-100 for live UI volume bar
+            const normalizedLevel = isMutedRef.current ? 0 : Math.min(100, Math.round((avg / 40) * 100));
+            setAudioLevel(normalizedLevel);
 
-            requestAnimationFrame(checkAudioLevel);
+            const sensitivity = settingsRef.current?.inputSensitivity ?? 65;
+            // Sensible threshold: low enough to trigger on speech, high enough to filter ambient noise
+            const threshold = Math.max(2.5, (100 - sensitivity) * 0.15);
+
+            const isMuted = isMutedRef.current;
+            const isDeafened = isDeafenedRef.current;
+            const isConnected = isCallConnectedRef.current;
+
+            const speaking = avg > threshold && !isMuted && !isDeafened && isConnected;
+
+            if (speaking !== isSpeakingRef.current) {
+              isSpeakingRef.current = speaking;
+              setIsSelfSpeaking(speaking);
+
+              // Immediately update local participant's isSpeaking in activeCall in real-time
+              const myId = currentUserRef.current?.id;
+              if (myId) {
+                setActiveCall((prev) => {
+                  if (!prev) return null;
+                  return {
+                    ...prev,
+                    participants: prev.participants.map((p) =>
+                      p.id === myId || p.name === currentUserRef.current?.displayName
+                        ? { ...p, isSpeaking: speaking }
+                        : p
+                    ),
+                  };
+                });
+              }
+            }
+
+            animFrameRef.current = requestAnimationFrame(checkAudioLevel);
           };
 
           checkAudioLevel();
@@ -354,8 +414,16 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     });
     remoteAudioElementsRef.current.clear();
 
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+
     setActiveCall(null);
     setIsSelfSpeaking(false);
+    setAudioLevel(0);
+    isSpeakingRef.current = false;
+    isCallConnectedRef.current = false;
     toast.info("Te has desconectado de la sala de voz.");
   }
 
@@ -593,6 +661,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         activeCall,
         speakingIndex,
         settings,
+        isSelfSpeaking,
+        audioLevel,
         joinCall,
         leaveCall,
         toggleMute,

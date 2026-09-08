@@ -17,7 +17,7 @@ import { useState } from "react";
 export function FloatingVoiceOverlay() {
   const pathname = usePathname();
   const router = useRouter();
-  const { activeCall, speakingIndex, toggleMute, toggleDeafen, leaveCall } = useVoiceCall();
+  const { activeCall, speakingIndex, isSelfSpeaking, audioLevel, toggleMute, toggleDeafen, leaveCall } = useVoiceCall();
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Only show floating PIP window when in a call AND not directly on the active voice channel page
@@ -47,7 +47,15 @@ export function FloatingVoiceOverlay() {
               <span className="text-xs font-black text-white truncate block">
                 {activeCall.channelName}
               </span>
-              <span className="text-[10px] font-mono text-emerald-400">14ms • PiP Flotante</span>
+              <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                {isSelfSpeaking ? (
+                  <span className="text-emerald-300 font-bold animate-pulse">● Hablando</span>
+                ) : activeCall.isMuted ? (
+                  <span className="text-rose-400 font-bold">Silenciado</span>
+                ) : (
+                  <span>14ms • PiP</span>
+                )}
+              </span>
             </div>
           </div>
 
@@ -65,7 +73,7 @@ export function FloatingVoiceOverlay() {
         {/* Participants Minecraft Faces Grid */}
         <div className="grid grid-cols-2 gap-2.5 py-3.5 my-auto">
           {activeCall.participants.slice(0, 4).map((p, idx) => {
-            const isSpeaking = Boolean(p.isSpeaking);
+            const isSpeaking = (idx === 0 && isSelfSpeaking) || Boolean(p.isSpeaking);
             const isMuted = p.isMuted;
             const nick = p.minecraftNick || p.name;
             const hasError = imgErrors[p.id];
@@ -175,6 +183,25 @@ export function FloatingVoiceOverlay() {
                 <IconHeadphones className="h-4 w-4" />
               )}
             </button>
+
+            {/* Mini VU Meter in PiP */}
+            {!activeCall.isMuted && (
+              <div className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] h-7">
+                {[15, 35, 60, 85].map((lvl, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      height: audioLevel >= lvl ? `${Math.min(12, 4 + (audioLevel / 100) * 8)}px` : "3px",
+                    }}
+                    className={`w-0.5 rounded-full transition-all duration-75 ${
+                      audioLevel >= lvl
+                        ? "bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.9)]"
+                        : "bg-white/15"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Disconnect button */}

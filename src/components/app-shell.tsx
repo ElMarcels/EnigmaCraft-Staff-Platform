@@ -13,6 +13,7 @@ import {
 import { PillDock } from "@/components/pill-dock";
 import { VoiceProvider } from "@/context/voice-context";
 import { FloatingVoiceOverlay } from "@/components/floating-voice-overlay";
+import { ChatUnreadListener } from "@/components/chat-unread-listener";
 
 export function AppShell({
   user,
@@ -114,6 +115,8 @@ export function AppShell({
       <main className="flex-1 w-full">{children}</main>
       {/* Floating Mini Voice Call Overlay (PIP) */}
       <FloatingVoiceOverlay />
+      {/* Real-time Unread Chat Notifications Bubble & Tracking */}
+      <ChatUnreadListener currentUserId={user.id} />
       {/* Dynamic Role-Aware Navigation Pill Dock */}
       <PillDock userRole={user.role} />
     </div>

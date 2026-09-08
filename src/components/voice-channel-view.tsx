@@ -44,6 +44,8 @@ export function VoiceChannelView({
     activeCall,
     speakingIndex,
     settings,
+    isSelfSpeaking,
+    audioLevel,
     joinCall,
     leaveCall,
     toggleMute,
@@ -113,6 +115,40 @@ export function VoiceChannelView({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Live Mic Activity VU Meter */}
+            {isConnectedHere && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+                <div className="flex items-center gap-0.5 h-4">
+                  {[10, 25, 45, 65, 85].map((lvl, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        height: !isMuted && audioLevel >= lvl ? `${Math.min(16, 6 + (audioLevel / 100) * 10)}px` : "4px",
+                      }}
+                      className={`w-1 rounded-full transition-all duration-75 ${
+                        isMuted
+                          ? "bg-rose-500/30"
+                          : audioLevel >= lvl
+                          ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                          : "bg-white/10"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span
+                  className={`text-[10px] font-mono font-bold ${
+                    isMuted
+                      ? "text-rose-400"
+                      : isSelfSpeaking
+                      ? "text-emerald-400 animate-pulse font-extrabold"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {isMuted ? "SILENCIADO" : isSelfSpeaking ? "● HABLANDO" : `${Math.round(audioLevel)}%`}
+                </span>
+              </div>
+            )}
+
             {/* Minimize to floating PiP window */}
             <button
               type="button"
@@ -171,7 +207,7 @@ export function VoiceChannelView({
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
               {participants.map((p) => {
                 const isCurrent = p.id === currentUserId || p.name === userDisplayName;
-                const isSpeaking = Boolean(p.isSpeaking);
+                const isSpeaking = (isCurrent && isSelfSpeaking) || Boolean(p.isSpeaking);
                 const pMuted = p.isMuted;
                 const nick = p.minecraftNick || p.name;
                 const hasError = imgErrors[p.id];
@@ -258,6 +294,39 @@ export function VoiceChannelView({
                   {isMuted ? <IconMicOff className="h-4 w-4" /> : <IconMic className="h-4 w-4" />}
                   <span>{isMuted ? "Mutear" : "Micrófono"}</span>
                 </button>
+
+                {/* Live Mic Activity meter */}
+                <div
+                  className={`flex h-9 px-2.5 items-center gap-1.5 rounded-xl border transition-all ${
+                    isMuted
+                      ? "bg-white/[0.02] border-white/[0.05] text-slate-500 opacity-50"
+                      : isSelfSpeaking
+                      ? "bg-emerald-500/15 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                      : "bg-white/[0.04] border-white/[0.08]"
+                  }`}
+                  title="Nivel de entrada del micrófono en tiempo real"
+                >
+                  <div className="flex items-center gap-0.5 h-4">
+                    {[10, 25, 45, 65, 85].map((lvl, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          height: !isMuted && audioLevel >= lvl ? `${Math.min(16, 5 + (audioLevel / 100) * 11)}px` : "3px",
+                        }}
+                        className={`w-1 rounded-full transition-all duration-75 ${
+                          isMuted
+                            ? "bg-slate-600"
+                            : audioLevel >= lvl
+                            ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                            : "bg-white/10"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className={`text-[10px] font-mono font-bold ${isSelfSpeaking ? "text-emerald-400 animate-pulse" : "text-slate-400"}`}>
+                    {isMuted ? "OFF" : isSelfSpeaking ? "HABLANDO" : `${Math.round(audioLevel)}%`}
+                  </span>
+                </div>
 
                 {/* Deafen */}
                 <button
