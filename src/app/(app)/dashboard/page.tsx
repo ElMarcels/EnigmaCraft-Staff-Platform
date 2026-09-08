@@ -343,6 +343,7 @@ export default async function DashboardPage() {
 
       {/* Grid of Metric Glass Cards (Functional Interactive Modals with Live Data) */}
       <InteractiveMetricCards
+        currentUser={{ id: user.id, displayName: user.displayName, role: user.role }}
         stats={stats}
         staffList={safeStaff}
         fileList={safeFiles}

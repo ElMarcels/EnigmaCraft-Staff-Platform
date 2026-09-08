@@ -769,6 +769,7 @@ function getFileExtensionBadge(name: string) {
 }
 
 export function InteractiveMetricCards({
+  currentUser,
   stats,
   staffList = [],
   fileList = [],
@@ -776,6 +777,7 @@ export function InteractiveMetricCards({
   channelList = [],
   totalFileBytes = 0,
 }: {
+  currentUser?: { id: string; displayName: string; role: string } | null;
   stats: MetricStatItem[];
   staffList?: OnlineStaffItem[];
   fileList?: DashboardFileItem[];
@@ -799,7 +801,11 @@ export function InteractiveMetricCards({
     sounds.playSuccess();
     joinCall(
       { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
-      { id: "founder-mortal", displayName: "mortal_pirata107", role: "FOUNDER" }
+      {
+        id: currentUser?.id || "me",
+        displayName: currentUser?.displayName || "mortal_pirata107",
+        role: currentUser?.role || "FOUNDER",
+      }
     );
     setActiveModal(null);
     toast.success("¡Conectado a Sala de Guardia!", {
@@ -1004,7 +1010,11 @@ export function InteractiveMetricCards({
                                   sounds.playSuccess();
                                   joinCall(
                                     { id: ch.id, name: ch.name, categoryName: ch.categoryName },
-                                    { id: "me", displayName: "mortal_pirata107", role: "FOUNDER" }
+                                    {
+                                      id: currentUser?.id || "me",
+                                      displayName: currentUser?.displayName || "mortal_pirata107",
+                                      role: currentUser?.role || "FOUNDER",
+                                    }
                                   );
                                   setActiveModal(null);
                                   toast.success(`¡Conectado a ${ch.name}!`, {

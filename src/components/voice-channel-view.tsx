@@ -195,7 +195,7 @@ export function VoiceChannelView({
               onClick={() =>
                 joinCall(
                   { id: channel.id, name: channel.name, categoryName: channel.categoryName },
-                  { id: currentUserId || "me", displayName: userDisplayName, role: "FOUNDER" }
+                  { id: currentUserId || "me", displayName: userDisplayName, role: userRole }
                 )
               }
               className="btn-primary py-2 px-6 text-xs font-bold cursor-pointer"
