@@ -754,17 +754,9 @@ export function InteractiveMetricCards({
 
   function handleConnectVoiceFromCard() {
     sounds.playSuccess();
-    const realStaff = staffList.map((s) => ({
-      id: s.id,
-      displayName: s.displayName,
-      role: s.role,
-      avatarColor: s.avatarColor,
-      minecraftNick: s.displayName,
-    }));
     joinCall(
       { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
-      { id: "founder-mortal", displayName: "mortal_pirata107", role: "FOUNDER" },
-      realStaff
+      { id: "founder-mortal", displayName: "mortal_pirata107", role: "FOUNDER" }
     );
     setActiveModal(null);
     toast.success("¡Conectado a Sala de Guardia!", {
@@ -969,14 +961,7 @@ export function InteractiveMetricCards({
                                   sounds.playSuccess();
                                   joinCall(
                                     { id: ch.id, name: ch.name, categoryName: ch.categoryName },
-                                    { id: "me", displayName: "mortal_pirata107", role: "FOUNDER" },
-                                    staffList.map((s) => ({
-                                      id: s.id,
-                                      displayName: s.displayName,
-                                      role: s.role,
-                                      avatarColor: s.avatarColor,
-                                      minecraftNick: s.displayName,
-                                    }))
+                                    { id: "me", displayName: "mortal_pirata107", role: "FOUNDER" }
                                   );
                                   setActiveModal(null);
                                   toast.success(`¡Conectado a ${ch.name}!`, {
@@ -1252,17 +1237,9 @@ export function InteractiveOperationsHub({
 
   function handleDirectVoicePip() {
     sounds.playSuccess();
-    const realStaff = staffList.map((s) => ({
-      id: s.id,
-      displayName: s.displayName,
-      role: s.role,
-      avatarColor: s.avatarColor,
-      minecraftNick: s.displayName,
-    }));
     joinCall(
       { id: "voz-guardia", name: "🔊 Sala de Guardia", categoryName: "SALAS DE VOZ" },
-      { id: currentUser?.id || "founder-mortal", displayName: currentUser?.displayName || "mortal_pirata107", role: currentUser?.role || "FOUNDER" },
-      realStaff
+      { id: currentUser?.id || "founder-mortal", displayName: currentUser?.displayName || "mortal_pirata107", role: currentUser?.role || "FOUNDER" }
     );
     toast.success("¡Conectado a Sala de Guardia!", {
       description: "Ventana flotante PiP activa en la esquina superior con las skins de Minecraft.",

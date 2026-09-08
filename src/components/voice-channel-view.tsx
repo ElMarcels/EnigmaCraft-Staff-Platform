@@ -58,25 +58,15 @@ export function VoiceChannelView({
 
   const isConnectedHere = activeCall?.isConnected && activeCall.channelId === channel.id;
 
-  // Auto-connect to this voice channel with real team members
+  // Auto-connect to this voice channel with real current user
   useEffect(() => {
     if (!activeCall || activeCall.channelId !== channel.id) {
-      const realOthers = members
-        .filter((m) => m.id !== currentUserId && m.displayName !== userDisplayName)
-        .map((m) => ({
-          id: m.id,
-          displayName: m.displayName,
-          role: m.role,
-          avatarColor: m.avatarColor,
-          minecraftNick: m.displayName,
-        }));
       joinCall(
         { id: channel.id, name: channel.name, categoryName: channel.categoryName },
-        { id: currentUserId || "me", displayName: userDisplayName, role: "FOUNDER" },
-        realOthers
+        { id: currentUserId || "me", displayName: userDisplayName, role: "FOUNDER" }
       );
     }
-  }, [channel.id, channel.name, channel.categoryName, currentUserId, userDisplayName, members]);
+  }, [channel.id, channel.name, channel.categoryName, currentUserId, userDisplayName]);
 
   const participants = activeCall?.participants || [];
   const isMuted = activeCall?.isMuted ?? false;
@@ -177,12 +167,12 @@ export function VoiceChannelView({
           </div>
         ) : (
           <div className="p-4 space-y-3">
-            {/* Participants Grid (Minecraft Face Avatars with Speaking Glowing Indicators) */}
+            {/* Participants Grid (Only Real Connected Users with Real-Time Speaking Ring) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
-              {participants.map((p, idx) => {
-                const isCurrent = idx === 0;
-                const isSpeaking = speakingIndex === idx && (isCurrent ? !isMuted : !p.isMuted);
-                const pMuted = isCurrent ? isMuted : p.isMuted;
+              {participants.map((p) => {
+                const isCurrent = p.id === currentUserId || p.name === userDisplayName;
+                const isSpeaking = Boolean(p.isSpeaking);
+                const pMuted = p.isMuted;
                 const nick = p.minecraftNick || p.name;
                 const hasError = imgErrors[p.id];
 
@@ -243,6 +233,14 @@ export function VoiceChannelView({
                 );
               })}
             </div>
+
+            {/* If only current user is in the room */}
+            {participants.length === 1 && (
+              <div className="flex items-center justify-center gap-2 py-2 text-slate-400 text-xs font-medium bg-white/[0.02] border border-white/[0.05] rounded-xl px-4">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Estás solo en la sala de voz. Esperando a que otros miembros del staff se conecten...</span>
+              </div>
+            )}
 
             {/* Quick Actions Strip */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06]">

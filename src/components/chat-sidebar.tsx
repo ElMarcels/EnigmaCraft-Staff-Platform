@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ChannelCategory, Channel } from "@prisma/client";
 import {
   createCategory,
   createChannel,
   deleteChannel,
 } from "@/actions/messaging";
+import {
+  ActiveSpeakerSvg,
+  ChannelVoiceHoverBubble,
+  HoverVoiceUser,
+} from "@/components/channel-voice-hover-bubble";
 import {
   IconPlus,
   IconHash,
@@ -70,6 +75,37 @@ export function ChatSidebar({
   // Quick mic & audio state for the bottom bar
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
+
+  // Real-time voice presence map: channelId -> users
+  const [voicePresence, setVoicePresence] = useState<Record<string, HoverVoiceUser[]>>({});
+  const [hoveredVoice, setHoveredVoice] = useState<{
+    channelName: string;
+    users: HoverVoiceUser[];
+    pos: { x: number; y: number };
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchPresence() {
+      try {
+        const res = await fetch("/api/voice/presence");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.presence) {
+          setVoicePresence(data.presence);
+        }
+      } catch {
+        // quiet fallback
+      }
+    }
+
+    fetchPresence();
+    const interval = setInterval(fetchPresence, 3500);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   function toggleCollapse(catId: string) {
     sounds.playPop();
@@ -271,13 +307,42 @@ export function ChatSidebar({
                     {cat.channels.map((ch) => {
                       const active = pathname === `/chat/${ch.id}`;
                       const isVoice = ch.type === "VOICE";
+                      // Find real users connected to this channel or matching voice alias
+                      const connectedUsers =
+                        voicePresence[ch.id] ||
+                        (ch.name.toLowerCase().includes("guardia") ? voicePresence["voz-guardia"] : []) ||
+                        [];
+                      const hasActiveVoice = connectedUsers.length > 0;
 
                       return (
                         <div
                           key={ch.id}
+                          onMouseEnter={(e) => {
+                            if (hasActiveVoice) {
+                              setHoveredVoice({
+                                channelName: ch.name,
+                                users: connectedUsers,
+                                pos: { x: e.clientX, y: e.clientY },
+                              });
+                            }
+                          }}
+                          onMouseMove={(e) => {
+                            if (hasActiveVoice) {
+                              setHoveredVoice({
+                                channelName: ch.name,
+                                users: connectedUsers,
+                                pos: { x: e.clientX, y: e.clientY },
+                              });
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            setHoveredVoice(null);
+                          }}
                           className={`group relative flex items-center justify-between rounded-xl px-2.5 py-1.5 transition-all text-xs font-medium cursor-pointer ${
                             active
                               ? "bg-rose-500/15 border border-rose-500/30 text-white font-bold shadow-[0_0_15px_rgba(244,63,94,0.15)]"
+                              : hasActiveVoice
+                              ? "bg-emerald-500/10 border border-emerald-500/30 text-white font-semibold shadow-[0_0_12px_rgba(16,185,129,0.15)]"
                               : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100"
                           }`}
                         >
@@ -287,9 +352,20 @@ export function ChatSidebar({
                             className="flex min-w-0 flex-1 items-center gap-2"
                             title={ch.description || undefined}
                           >
-                            <span className="shrink-0">{getChannelIcon(ch)}</span>
+                            {/* SVG de altavoz animado a la izquierda del nombre cuando haya alguien conectado */}
+                            {hasActiveVoice ? (
+                              <ActiveSpeakerSvg className="h-4 w-4" />
+                            ) : (
+                              <span className="shrink-0">{getChannelIcon(ch)}</span>
+                            )}
                             <span className="truncate">{ch.name}</span>
-                            {isVoice && (
+                            {hasActiveVoice && (
+                              <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1 shrink-0 animate-pulse">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                {connectedUsers.length}
+                              </span>
+                            )}
+                            {isVoice && !hasActiveVoice && (
                               <span className="ml-auto text-[9px] font-mono px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
                                 VOZ
                               </span>
@@ -382,6 +458,16 @@ export function ChatSidebar({
           </Link>
         </div>
       </div>
+
+      {/* Floating Liquid Glass Hover Bubble for Active Voice Users */}
+      {hoveredVoice && (
+        <ChannelVoiceHoverBubble
+          channelName={hoveredVoice.channelName}
+          users={hoveredVoice.users}
+          cursorPos={hoveredVoice.pos}
+          isVisible={true}
+        />
+      )}
     </aside>
   );
 }

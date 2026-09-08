@@ -62,11 +62,11 @@ export function FloatingVoiceOverlay() {
           </button>
         </div>
 
-        {/* Participants Minecraft Faces Grid (Square 2x2 presentation) */}
+        {/* Participants Minecraft Faces Grid */}
         <div className="grid grid-cols-2 gap-2.5 py-3.5 my-auto">
           {activeCall.participants.slice(0, 4).map((p, idx) => {
-            const isSpeaking = speakingIndex === idx && (idx === 0 ? !activeCall.isMuted : !p.isMuted);
-            const isMuted = idx === 0 ? activeCall.isMuted : p.isMuted;
+            const isSpeaking = Boolean(p.isSpeaking);
+            const isMuted = p.isMuted;
             const nick = p.minecraftNick || p.name;
             const hasError = imgErrors[p.id];
 
