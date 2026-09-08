@@ -307,12 +307,15 @@ export function ChatSidebar({
                     {cat.channels.map((ch) => {
                       const active = pathname === `/chat/${ch.id}`;
                       const isVoice = ch.type === "VOICE";
-                      // Find real users connected to this channel or matching voice alias
-                      const connectedUsers =
-                        voicePresence[ch.id] ||
-                        (ch.name.toLowerCase().includes("guardia") ? voicePresence["voz-guardia"] : []) ||
-                        [];
-                      const hasActiveVoice = connectedUsers.length > 0;
+                      // Only voice channels can EVER have connected voice users or active speaker badges!
+                      const connectedUsers = isVoice
+                        ? voicePresence[ch.id] ||
+                          (ch.id === "voz-guardia" || ch.name.toLowerCase().includes("sala de guardia")
+                            ? voicePresence["voz-guardia"]
+                            : []) ||
+                          []
+                        : [];
+                      const hasActiveVoice = isVoice && connectedUsers.length > 0;
 
                       return (
                         <div
@@ -350,7 +353,6 @@ export function ChatSidebar({
                             href={`/chat/${ch.id}`}
                             onClick={() => sounds.playPop()}
                             className="flex min-w-0 flex-1 items-center gap-2"
-                            title={ch.description || undefined}
                           >
                             {/* SVG de altavoz animado a la izquierda del nombre cuando haya alguien conectado */}
                             {hasActiveVoice ? (

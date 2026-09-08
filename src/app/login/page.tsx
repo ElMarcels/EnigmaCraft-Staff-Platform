@@ -93,19 +93,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Preview Link Button */}
-          <div className="mt-6 pt-5 border-t border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
-            <span className="flex items-center gap-1.5 text-slate-400">
+          <div className="mt-6 pt-5 border-t border-white/[0.08] flex items-center justify-center text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 text-slate-400 font-medium">
               <IconShield className="h-3.5 w-3.5 text-rose-400" />
-              Acceso Seguro
+              Acceso Exclusivo Staff & Administradores
             </span>
-            <Link
-              href="/preview"
-              className="btn-secondary !py-1.5 !px-3 text-xs font-semibold text-rose-300 hover:text-white border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer z-30"
-            >
-              <IconSparkles className="h-3.5 w-3.5 text-rose-400" />
-              Abrir Preview
-            </Link>
           </div>
         </div>
 

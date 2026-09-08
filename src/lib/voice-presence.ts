@@ -71,7 +71,15 @@ export function registerVoiceParticipant(
     isSpeaking?: boolean;
   }
 ): VoiceParticipantState[] {
-  pruneStale();
+  // Enforce single voice channel per user across the whole platform
+  for (const cId of Object.keys(store.channels)) {
+    if (cId !== channelId && store.channels[cId]?.[user.userId]) {
+      delete store.channels[cId][user.userId];
+      if (Object.keys(store.channels[cId]).length === 0) {
+        delete store.channels[cId];
+      }
+    }
+  }
 
   if (!store.channels[channelId]) {
     store.channels[channelId] = {};

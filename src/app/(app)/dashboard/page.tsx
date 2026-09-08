@@ -17,6 +17,7 @@ import {
   IconCheck,
 } from "@/components/icons";
 import { statusOf } from "@/lib/role-meta";
+import { getAllVoicePresence } from "@/lib/voice-presence";
 import {
   InteractiveOnlineStaff,
   InteractiveRecentAnnouncements,
@@ -30,48 +31,34 @@ export const dynamic = "force-dynamic";
 function fmtBytes(n: number) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  let staffCount = 5;
-  let channelCount = 12;
-  let messageCount = 42;
+  let staffCount = 1;
+  let channelCount = 0;
+  let messageCount = 0;
   let fileCount = 0;
   let fileBytes = { _sum: { size: 0 } };
   let backupCount = 0;
   let dbFiles: any[] = [];
   let dbBackups: any[] = [];
   let dbChannels: any[] = [];
-  let announcements: any[] = [
-    {
-      id: "demo-ann-1",
-      title: "Lanzamiento de la Temporada 5 de Survival Custom",
-      content: "Este viernes a las 18:00 UTC se lanzará la nueva temporada con economía balanceada, calabozos y protección de parcelas.",
-      createdAt: new Date(),
-      type: "EVENT",
-      serverTarget: "Survival Custom",
-      author: { displayName: "ElMarcels" },
-    },
-    {
-      id: "demo-ann-2",
-      title: "Protocolo de Seguridad y Guardia de Fin de Semana",
-      content: "Por favor revisad los turnos asignados en el canal de guardia. Toda apelación debe quedar registrada en #sanciones-logs.",
-      createdAt: new Date(Date.now() - 86400000),
-      type: "ANNOUNCEMENT",
-      serverTarget: "Toda la Red (Global)",
-      author: { displayName: "mortal_pirata107" },
-    },
-  ];
+  let announcements: any[] = [];
   let allStaff: any[] = [
-    { id: "1", displayName: "mortal_pirata107", username: "mortal_pirata107", avatarColor: "#f43f5e", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
-    { id: "2", displayName: "ElMarcels", username: "elmarcels", avatarColor: "#e11d48", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
-    { id: "3", displayName: "Ale256", username: "ale256", avatarColor: "#f59e0b", role: "FOUNDER", status: "En línea", lastSeenAt: new Date() },
-    { id: "4", displayName: "Mamut_Feliz", username: "mamut_feliz", avatarColor: "#06b6d4", role: "STAFF", status: "En línea", lastSeenAt: new Date() },
-    { id: "5", displayName: "CobaltJ", username: "cobaltj", avatarColor: "#10b981", role: "STAFF", status: "Ausente", lastSeenAt: new Date(Date.now() - 3600000) },
+    {
+      id: user.id,
+      displayName: user.displayName,
+      username: user.username,
+      avatarColor: user.avatarColor || "#f43f5e",
+      role: user.role,
+      status: "En línea",
+      lastSeenAt: new Date(),
+    },
   ];
 
   try {
@@ -79,8 +66,10 @@ export default async function DashboardPage() {
       prisma.user.count({ where: { active: true } }),
       prisma.channel.count(),
       prisma.message.count(),
-      prisma.fileNode.count({ where: { isFolder: false } }),
-      prisma.fileNode.aggregate({ _sum: { size: true }, where: { isFolder: false } }),
+      // Real file count: counts all items in Drive (files + folders)
+      prisma.fileNode.count(),
+      // Real storage sum across all files
+      prisma.fileNode.aggregate({ _sum: { size: true } }),
       prisma.backup.count(),
       prisma.announcement.findMany({
         where: { OR: [{ publishAt: null }, { publishAt: { lte: new Date() } }] },
@@ -102,10 +91,10 @@ export default async function DashboardPage() {
           contactDiscord: true,
         },
       }),
+      // Real files & folders from EnigmaDrive
       prisma.fileNode.findMany({
-        where: { isFolder: false },
-        take: 12,
-        orderBy: { createdAt: "desc" },
+        take: 15,
+        orderBy: [{ isFolder: "desc" }, { createdAt: "desc" }],
         include: { owner: true },
       }),
       prisma.backup.findMany({
@@ -119,28 +108,36 @@ export default async function DashboardPage() {
         include: { category: true },
       }),
     ]);
+
     if (res[0] > 0) {
       staffCount = res[0];
-      channelCount = res[1] || 12;
-      messageCount = res[2];
-      fileCount = res[3];
+      channelCount = res[1] || 0;
+      messageCount = res[2] || 0;
+      fileCount = res[3] || 0;
       fileBytes = res[4] as any;
-      backupCount = res[5];
-      announcements = res[6];
-      allStaff = res[7];
+      backupCount = res[5] || 0;
+      if (res[6] && res[6].length > 0) announcements = res[6];
+      if (res[7] && res[7].length > 0) allStaff = res[7];
       dbFiles = res[8] || [];
       dbBackups = res[9] || [];
       dbChannels = res[10] || [];
     }
-  } catch {
-    // Graceful offline fallback
+  } catch (err) {
+    console.error("Dashboard database query error:", err);
   }
+
+  // Calculate real total storage in bytes
+  const totalFileBytes =
+    fileBytes?._sum?.size !== null && fileBytes?._sum?.size !== undefined
+      ? Number(fileBytes._sum.size)
+      : dbFiles.reduce((acc, f) => acc + (Number(f.size) || 0), 0);
 
   const safeFiles = dbFiles.map((f) => ({
     id: String(f.id),
     name: String(f.name),
+    isFolder: Boolean(f.isFolder),
     size: Number(f.size || 0),
-    mimeType: f.mimeType || "application/octet-stream",
+    mimeType: f.mimeType || (f.isFolder ? "folder" : "application/octet-stream"),
     url: f.url || null,
     createdAt: f.createdAt instanceof Date ? f.createdAt.toISOString() : String(f.createdAt),
     owner: {
@@ -184,9 +181,23 @@ export default async function DashboardPage() {
       : null,
   }));
 
+  // Detect users currently connected to WebRTC voice channels
+  const voicePresences = getAllVoicePresence();
+  const voiceUserIds = new Set(
+    Object.values(voicePresences).flatMap((list) => list.map((p) => p.userId))
+  );
+
+  // Real connected staff:
+  // 1. Current logged in user is 100% online
+  // 2. Any staff member currently inside a WebRTC voice call
+  // 3. Any staff member with active heartbeat within the last 10 minutes (and not away)
   const safeOnline = safeStaff.filter((u) => {
+    if (u.id === user.id || u.username === user.username) return true;
+    if (voiceUserIds.has(u.id) || voiceUserIds.has(u.username)) return true;
     const raw = allStaff.find((x) => String(x.id) === u.id);
-    return statusOf({ status: raw?.status, lastSeenAt: raw?.lastSeenAt })?.key === "ONLINE";
+    if (!raw || !raw.lastSeenAt) return false;
+    const diffMs = Date.now() - new Date(raw.lastSeenAt).getTime();
+    return diffMs < 10 * 60 * 1000 && raw.status !== "AWAY" && raw.status !== "VACATION";
   });
 
   const safeAnnouncements = announcements.map((a) => ({
@@ -215,7 +226,7 @@ export default async function DashboardPage() {
     {
       label: "Staff en Red",
       value: staffCount,
-      sub: "Miembros registrados",
+      sub: `${safeOnline.length} en línea ahora`,
       iconName: "users",
       href: "/directory",
       gradient: "from-white/[0.08] to-transparent",
@@ -235,7 +246,7 @@ export default async function DashboardPage() {
     {
       label: "Archivos & Documentos",
       value: fileCount,
-      sub: fileBytes?._sum?.size ? fmtBytes(fileBytes._sum.size) : "0 B",
+      sub: totalFileBytes > 0 ? fmtBytes(totalFileBytes) : `${fileCount} elemento${fileCount === 1 ? "" : "s"} en Drive`,
       iconName: "files",
       href: "/files",
       gradient: "from-emerald-500/20 to-teal-600/10",
@@ -245,7 +256,7 @@ export default async function DashboardPage() {
     {
       label: "Copias de Seguridad",
       value: backupCount,
-      sub: "Copias seguras del sistema",
+      sub: backupCount > 0 ? `${backupCount} copias registradas` : "Crear respaldo manual",
       iconName: "backup",
       href: "/founder/backups",
       gradient: "from-amber-500/20 to-orange-600/10",

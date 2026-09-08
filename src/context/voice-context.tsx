@@ -212,6 +212,30 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     channel: { id: string; name: string; categoryName?: string },
     user?: VoiceMemberInput
   ) {
+    // If already in this channel, do nothing
+    if (activeCall?.isConnected && activeCall.channelId === channel.id) {
+      return;
+    }
+
+    // If connected to another voice channel, cleanly disconnect first
+    if (activeCall?.isConnected) {
+      try {
+        if (currentUserRef.current) {
+          fetch(
+            `/api/voice/presence?channelId=${encodeURIComponent(activeCall.channelId)}&userId=${encodeURIComponent(currentUserRef.current.id)}`,
+            { method: "DELETE" }
+          ).catch(() => {});
+        }
+        peerConnectionsRef.current.forEach((pc) => pc.close());
+        peerConnectionsRef.current.clear();
+        remoteAudioElementsRef.current.forEach((el) => {
+          el.pause();
+          el.srcObject = null;
+        });
+        remoteAudioElementsRef.current.clear();
+      } catch {}
+    }
+
     sounds.playSuccess();
 
     const myUser: VoiceMemberInput = user || {

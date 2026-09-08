@@ -59,6 +59,7 @@ export interface OnlineStaffItem {
 export interface DashboardFileItem {
   id: string;
   name: string;
+  isFolder?: boolean;
   size: number;
   mimeType: string;
   url?: string | null;
@@ -1051,6 +1052,37 @@ export function InteractiveMetricCards({
                     </div>
                   ) : (
                     fileList.map((f) => {
+                      if (f.isFolder) {
+                        return (
+                          <div
+                            key={f.id}
+                            onClick={() => {
+                              setActiveModal(null);
+                              router.push(`/files?folder=${f.id}`);
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/[0.04] border border-amber-500/20 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-[10px] font-mono font-black px-2 py-1 rounded-lg border shrink-0 bg-amber-500/20 text-amber-300 border-amber-500/30 flex items-center gap-1">
+                                <IconFolder className="h-3 w-3" />
+                                CARPETA
+                              </span>
+                              <div className="truncate">
+                                <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors block truncate">
+                                  {f.name}
+                                </span>
+                                <span className="text-[10px] text-slate-400 truncate block">
+                                  Carpeta de Drive · Por {f.owner?.displayName || "Staff"}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[11px] text-amber-300 font-semibold group-hover:translate-x-0.5 transition-transform shrink-0 flex items-center gap-1">
+                              Abrir <IconArrowRight className="h-3 w-3" />
+                            </span>
+                          </div>
+                        );
+                      }
+
                       const badge = getFileExtensionBadge(f.name);
                       return (
                         <div

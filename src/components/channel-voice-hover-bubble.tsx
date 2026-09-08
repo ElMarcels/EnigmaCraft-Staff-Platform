@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { RoleBadge } from "@/components/role-badge";
 import { IconMic, IconMicOff } from "@/components/icons";
 
@@ -53,16 +54,16 @@ export function ChannelVoiceHoverBubble({
     setMounted(true);
   }, []);
 
-  if (!mounted || !isVisible || users.length === 0) return null;
+  if (!mounted || !isVisible || users.length === 0 || typeof document === "undefined") return null;
 
   // Offset slightly to the right and below cursor, and clamp to screen bounds
-  const x = Math.min(cursorPos.x + 16, window.innerWidth - 280);
-  const y = Math.min(cursorPos.y + 12, window.innerHeight - 240);
+  const x = Math.min(cursorPos.x + 18, window.innerWidth - 280);
+  const y = Math.min(cursorPos.y + 14, window.innerHeight - 250);
 
-  return (
+  return createPortal(
     <div
       style={{ left: `${x}px`, top: `${y}px` }}
-      className="fixed z-[9999] pointer-events-none select-none transition-transform duration-75 ease-out animate-in fade-in zoom-in-95"
+      className="fixed z-[999999] pointer-events-none select-none transition-transform duration-75 ease-out animate-in fade-in zoom-in-95"
     >
       <div className="w-64 rounded-2xl bg-[#070b16]/90 backdrop-blur-2xl border border-white/20 p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(16,185,129,0.2)] text-white space-y-2.5">
         {/* Shimmer top line */}
@@ -139,6 +140,7 @@ export function ChannelVoiceHoverBubble({
           Haz clic para entrar a la llamada
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
