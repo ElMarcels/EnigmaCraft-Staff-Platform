@@ -18,9 +18,15 @@ function getConnectionString(): string | undefined {
 
 function createClient() {
   const connectionString = getConnectionString();
+  const poolMax = process.env.DATABASE_POOL_MAX
+    ? parseInt(process.env.DATABASE_POOL_MAX, 10)
+    : process.env.NODE_ENV === "production"
+    ? 10
+    : 5;
+
   const adapter = new PrismaPg({
     connectionString,
-    max: 1,
+    max: Number.isFinite(poolMax) && poolMax > 0 ? poolMax : 5,
   });
   return new PrismaClient({ adapter });
 }

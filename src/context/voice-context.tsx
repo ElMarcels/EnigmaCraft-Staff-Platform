@@ -61,13 +61,23 @@ interface VoiceContextType {
   updateSettings: (partial: Partial<VoiceSettings>) => void;
 }
 
-const ICE_SERVERS: RTCConfiguration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-  ],
-};
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+];
+
+function getIceConfiguration(): RTCConfiguration {
+  const servers: RTCIceServer[] = [...DEFAULT_ICE_SERVERS];
+  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_TURN_URL) {
+    servers.push({
+      urls: process.env.NEXT_PUBLIC_TURN_URL,
+      username: process.env.NEXT_PUBLIC_TURN_USERNAME || undefined,
+      credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL || undefined,
+    });
+  }
+  return { iceServers: servers };
+}
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
 
@@ -220,7 +230,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       return peerConnectionsRef.current.get(remoteUserId)!;
     }
 
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    const pc = new RTCPeerConnection(getIceConfiguration());
 
     // Add local mic tracks to the connection
     if (localStreamRef.current) {
@@ -526,7 +536,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             avatarColor: myUser.avatarColor || "#f43f5e",
             isMuted: activeCall?.isMuted ?? false,
             isDeafened: activeCall?.isDeafened ?? false,
-            isSpeaking: isSelfSpeaking,
+            isSpeaking: isSpeakingRef.current,
           }),
         });
 
@@ -542,7 +552,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               avatarColor: p.avatarColor || "#f43f5e",
               isMuted: p.userId === myUser.id ? (activeCall?.isMuted ?? false) : Boolean(p.isMuted),
               isDeafened: p.userId === myUser.id ? (activeCall?.isDeafened ?? false) : Boolean(p.isDeafened),
-              isSpeaking: p.userId === myUser.id ? isSelfSpeaking : Boolean(p.isSpeaking),
+              isSpeaking: p.userId === myUser.id ? isSpeakingRef.current : Boolean(p.isSpeaking),
               ping: 14,
             }));
 
@@ -586,7 +596,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     syncPresence();
     const interval = setInterval(syncPresence, 3800);
     return () => clearInterval(interval);
-  }, [activeCall?.isConnected, activeCall?.channelId, activeCall?.isMuted, activeCall?.isDeafened, isSelfSpeaking]);
+  }, [activeCall?.isConnected, activeCall?.channelId, activeCall?.isMuted, activeCall?.isDeafened]);
 
   // --- Real-time WebRTC Signal Polling (Offers, Answers, ICE Candidates) ---
   useEffect(() => {

@@ -34,7 +34,9 @@ export default async function BackupsPage() {
   let backups: any[] = DEMO_BACKUPS;
 
   try {
-    await maybeRunAutomaticBackup();
+    // Non-blocking trigger in background if due
+    maybeRunAutomaticBackup().catch(() => {});
+
     const dbBackups = await prisma.backup.findMany({
       orderBy: { createdAt: "desc" },
       include: { creator: true },

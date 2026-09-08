@@ -33,7 +33,7 @@ export function FloatingVoiceOverlay() {
   return (
     <aside
       aria-label="Ventana flotante de chat de voz"
-      className="fixed top-18 right-6 z-50 select-none animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300 pointer-events-auto"
+      className="fixed bottom-4 right-4 sm:bottom-auto sm:top-18 sm:right-6 z-50 select-none animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-4 duration-300 pointer-events-auto max-w-[calc(100vw-2rem)]"
     >
       <div className="w-68 sm:w-72 rounded-3xl border border-rose-500/40 bg-[#080c16]/95 backdrop-blur-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] hover:border-rose-500/60 transition-all flex flex-col justify-between">
         {/* Header */}

@@ -12,12 +12,14 @@ export function ChatChannelView({
   messages,
   userDisplayName,
   currentUserId,
+  userRole,
   members,
 }: {
   channel: { id: string; name: string; type: string; description: string | null; categoryName: string };
   messages: MessageDTO[];
   userDisplayName: string;
   currentUserId?: string;
+  userRole?: string;
   members?: ChannelMemberDTO[];
 }) {
   const [showMembers, setShowMembers] = useState(true);
@@ -28,6 +30,7 @@ export function ChatChannelView({
         channel={channel}
         userDisplayName={userDisplayName}
         currentUserId={currentUserId}
+        userRole={userRole}
         members={members}
         messages={messages}
       />

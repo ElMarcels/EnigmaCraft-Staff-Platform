@@ -176,6 +176,7 @@ export default async function ChannelPage({
       }))}
       userDisplayName={user?.displayName || "Marcel"}
       currentUserId={user?.id}
+      userRole={user?.role}
       members={members}
     />
   );

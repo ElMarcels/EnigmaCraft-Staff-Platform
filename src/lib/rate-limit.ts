@@ -6,12 +6,24 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
+function pruneExpired() {
+  const now = Date.now();
+  for (const [k, v] of rateLimitStore.entries()) {
+    if (now > v.resetAt) {
+      rateLimitStore.delete(k);
+    }
+  }
+}
+
 export function checkRateLimit(
   key: string,
   limit: number = 5,
   windowMs: number = 10 * 60 * 1000 // 10 minutes
 ): { allowed: boolean; remaining: number; resetInSeconds: number } {
   const now = Date.now();
+  if (rateLimitStore.size > 150) {
+    pruneExpired();
+  }
   const existing = rateLimitStore.get(key);
 
   if (!existing || now > existing.resetAt) {

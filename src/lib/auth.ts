@@ -80,8 +80,19 @@ function encodeBase64Url(input: string): string {
     .replace(/=+$/, "");
 }
 
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.trim().length === 0) {
+    if (process.env.NODE_ENV === "production") {
+      console.warn("⚠️ [SECURITY WARNING] SESSION_SECRET is not defined in production environment. A default key is in use.");
+    }
+    return "dev-secret-enigmacraft-local-key";
+  }
+  return secret.trim();
+}
+
 function sign(data: string): string {
-  return createHmac("sha256", process.env.SESSION_SECRET || "dev-secret")
+  return createHmac("sha256", getSessionSecret())
     .update(data)
     .digest("base64url");
 }

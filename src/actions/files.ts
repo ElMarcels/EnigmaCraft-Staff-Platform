@@ -6,21 +6,28 @@ import { getCurrentUserOrThrow } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { deleteBlob } from "@/lib/blob";
 
-async function collectBlobKeys(nodeId: string): Promise<string[]> {
-  const keys: string[] = [];
-  const stack = [nodeId];
-  while (stack.length) {
-    const current = stack.pop()!;
+async function collectDescendantKeysAndIds(
+  rootId: string
+): Promise<{ blobKeys: string[]; nodeIds: string[] }> {
+  const blobKeys: string[] = [];
+  const nodeIds: string[] = [rootId];
+  const queue: string[] = [rootId];
+
+  while (queue.length > 0) {
+    const currentBatch = queue.splice(0, 50);
     const children = await prisma.fileNode.findMany({
-      where: { parentId: current },
+      where: { parentId: { in: currentBatch } },
       select: { id: true, isFolder: true, storageKey: true },
     });
+
     for (const child of children) {
-      if (child.storageKey) keys.push(child.storageKey);
-      if (child.isFolder) stack.push(child.id);
+      nodeIds.push(child.id);
+      if (child.storageKey) blobKeys.push(child.storageKey);
+      if (child.isFolder) queue.push(child.id);
     }
   }
-  return keys;
+
+  return { blobKeys, nodeIds };
 }
 
 function sanitize(name: string, fallback = "archivo"): string {
@@ -70,14 +77,6 @@ export async function createFolder(formData: FormData) {
   revalidatePath("/files");
 }
 
-async function deleteNodeRecursively(nodeId: string) {
-  const children = await prisma.fileNode.findMany({ where: { parentId: nodeId } });
-  for (const child of children) {
-    await deleteNodeRecursively(child.id);
-  }
-  await prisma.fileNode.delete({ where: { id: nodeId } });
-}
-
 export async function deleteFileOrFolder(nodeId: string) {
   const user = await getCurrentUserOrThrow();
   const node = await prisma.fileNode.findUnique({ where: { id: nodeId } });
@@ -89,11 +88,20 @@ export async function deleteFileOrFolder(nodeId: string) {
     return;
   }
 
-  const blobKeys = await collectBlobKeys(node.id);
-  if (node.storageKey) blobKeys.push(node.storageKey);
-  await Promise.all(blobKeys.map((k) => deleteBlob(k).catch(() => {})));
+  const { blobKeys, nodeIds } = await collectDescendantKeysAndIds(node.id);
+  if (node.storageKey && !blobKeys.includes(node.storageKey)) {
+    blobKeys.push(node.storageKey);
+  }
 
-  await deleteNodeRecursively(nodeId);
+  // Delete associated cloud blobs in parallel
+  if (blobKeys.length > 0) {
+    await Promise.all(blobKeys.map((k) => deleteBlob(k).catch(() => {})));
+  }
+
+  // Perform single batch deletion in database
+  await prisma.fileNode.deleteMany({
+    where: { id: { in: nodeIds } },
+  });
 
   await audit({
     userId: user.id,

@@ -31,12 +31,14 @@ export function VoiceChannelView({
   channel,
   currentUserId,
   userDisplayName,
+  userRole = "STAFF",
   members = [],
   messages = [],
 }: {
   channel: { id: string; name: string; description: string | null; categoryName: string };
   currentUserId?: string;
   userDisplayName: string;
+  userRole?: string;
   members?: ChannelMemberDTO[];
   messages?: MessageDTO[];
 }) {
@@ -65,10 +67,10 @@ export function VoiceChannelView({
     if (!activeCall || activeCall.channelId !== channel.id) {
       joinCall(
         { id: channel.id, name: channel.name, categoryName: channel.categoryName },
-        { id: currentUserId || "me", displayName: userDisplayName, role: "FOUNDER" }
+        { id: currentUserId || "me", displayName: userDisplayName, role: userRole }
       );
     }
-  }, [channel.id, channel.name, channel.categoryName, currentUserId, userDisplayName]);
+  }, [channel.id, channel.name, channel.categoryName, currentUserId, userDisplayName, userRole]);
 
   const participants = activeCall?.participants || [];
   const isMuted = activeCall?.isMuted ?? false;

@@ -283,6 +283,11 @@ export function MessageList({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [items.length]);
 
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
   // Real-time background sync
   useEffect(() => {
     if (!channelId) return;
@@ -290,7 +295,8 @@ export function MessageList({
     let isMounted = true;
     const interval = setInterval(async () => {
       try {
-        const lastMsg = items[items.length - 1];
+        const currentList = itemsRef.current;
+        const lastMsg = currentList[currentList.length - 1];
         const url = lastMsg
           ? `/api/chat/${channelId}/messages?since=${encodeURIComponent(lastMsg.createdAt)}`
           : `/api/chat/${channelId}/messages`;
@@ -338,7 +344,7 @@ export function MessageList({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [channelId, channelName, items, currentUserId]);
+  }, [channelId, channelName, currentUserId]);
 
   function react(messageId: string, emoji: string) {
     sounds.playReaction();
